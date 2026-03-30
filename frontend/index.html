@@ -1,0 +1,106 @@
+<div class="container">
+    <!-- Leaderboard Section -->
+    <div class="leaderboard-section">
+        <h2>🏆 Leaderboard</h2>
+        <div class="leaderboard-filters">
+            <button class="filter-btn active" data-gamemode="all">All</button>
+            <button class="filter-btn" data-gamemode="sumo">Sumo</button>
+            <button class="filter-btn" data-gamemode="bedfight">Bedfight</button>
+            <button class="filter-btn" data-gamemode="classic">Classic</button>
+            <button class="filter-btn" data-gamemode="skywars">Skywars</button>
+            <button class="filter-btn" data-gamemode="boxing">Boxing</button>
+        </div>
+        <div id="leaderboard" class="leaderboard"></div>
+    </div>
+
+    <!-- Call to Action -->
+    <div class="cta-section">
+        <h2>Want to join? Get tested now!</h2>
+        <button id="getTestedBtn" class="cta-btn">Get Tested →</button>
+    </div>
+</div>
+
+<!-- Queue Modal -->
+<div id="queueModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>Join Testing Queue</h2>
+        <form id="queueForm">
+            <div class="form-group">
+                <label>IGN (In-Game Name):</label>
+                <input type="text" id="ign" required>
+            </div>
+            <div class="form-group">
+                <label>Timezone:</label>
+                <input type="text" id="timezone" placeholder="e.g., UTC-5" required>
+            </div>
+            <div class="form-group">
+                <label>Preferred Server:</label>
+                <select id="preferredServer" required>
+                    <option value="US">US Server</option>
+                    <option value="EU">EU Server</option>
+                    <option value="ASIA">Asia Server</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Username for Leaderboard:</label>
+                <input type="text" id="leaderboardUsername" required>
+            </div>
+            <button type="submit" class="submit-btn">Join Queue</button>
+        </form>
+    </div>
+</div>
+
+<!-- Test Modal -->
+<div id="testModal" class="modal">
+    <div class="modal-content test-modal">
+        <span class="close">&times;</span>
+        <h2>Test Session</h2>
+        <div id="chatArea" class="chat-area">
+            <div id="chatMessages" class="chat-messages"></div>
+            <div class="chat-input">
+                <input type="text" id="chatInput" placeholder="Type your message...">
+                <button id="sendChatBtn">Send</button>
+            </div>
+        </div>
+        <div class="test-actions">
+            <button id="completeTestBtn" class="complete-btn">Complete Test</button>
+        </div>
+    </div>
+</div>
+
+<!-- Test Result Modal -->
+<div id="resultModal" class="modal">
+    <div class="modal-content">
+        <h2>Submit Test Results</h2>
+        <form id="resultForm">
+            <div class="form-group">
+                <label>Tester Score (X):</label>
+                <input type="number" id="testerScore" required>
+            </div>
+            <div class="form-group">
+                <label>Testee Score (Y):</label>
+                <input type="number" id="testeeScore" required>
+            </div>
+            <div class="form-group">
+                <label>Tester Name:</label>
+                <input type="text" id="testerName" required>
+            </div>
+            <div class="form-group">
+                <label>Testee Name:</label>
+                <input type="text" id="testeeName" required>
+            </div>
+            <div class="form-group">
+                <label>Testee IGN:</label>
+                <input type="text" id="testeeIgn" required>
+            </div>
+            <div class="form-group">
+                <label>Server Tested On:</label>
+                <input type="text" id="server" required>
+            </div>
+            <button type="submit" class="submit-btn">Submit Results</button>
+        </form>
+    </div>
+</div>
+
+<script src="script.js"></script>
