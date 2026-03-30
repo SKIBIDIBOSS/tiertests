@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - MC Tier Testing</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1 class="logo">MC Tier Testing</h1>
+            <div class="nav-links">
+                <a href="index.html">Leaderboard</a>
+                <a href="dashboard.html">Dashboard</a>
+                <a href="profile.html">Profile</a>
+                <a href="forum.html">Forum</a>
+                <a href="#" id="authLink">Login</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container profile-container">
+        <div id="userProfileDisplay" class="profile-display">
+            <div class="profile-header-large">
+                <img id="profileAvatar" src="" alt="Profile Picture" class="profile-avatar-large">
+                <h1 id="profileDisplayName"></h1>
+                <p id="profileJoinDate"></p>
+            </div>
+            
+            <div class="profile-stats">
+                <div class="stat-card">
+                    <h3>Sumo</h3>
+                    <p id="profileSumo">Unrated</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Bedfight</h3>
+                    <p id="profileBedfight">Unrated</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Classic</h3>
+                    <p id="profileClassic">Unrated</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Skywars</h3>
+                    <p id="profileSkywars">Unrated</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Boxing</h3>
+                    <p id="profileBoxing">Unrated</p>
+                </div>
+            </div>
+            
+            <div class="profile-info-details">
+                <div class="info-row">
+                    <strong>IGN:</strong> <span id="profileIgn"></span>
+                </div>
+                <div class="info-row">
+                    <strong>Timezone:</strong> <span id="profileTimezone"></span>
+                </div>
+                <div class="info-row">
+                    <strong>Preferred Server:</strong> <span id="profileServer"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="profile.js"></script>
+</body>
+</html>
