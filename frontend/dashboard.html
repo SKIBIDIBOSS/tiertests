@@ -73,3 +73,94 @@
                     <p><strong>Preferred Server:</strong> <span id="profileServer"></span></p>
                 </div>
                 <button id="editProfileBtn" class="edit-btn
+                                        <button id="editProfileBtn" class="edit-btn">Edit Profile</button>
+                    <button id="changePasswordBtn" class="edit-btn">Change Password</button>
+                </div>
+            </div>
+
+            <!-- Rankings Section -->
+            <div id="rankingsSection" class="section">
+                <h2>My Rankings</h2>
+                <div class="rankings-grid">
+                    <div class="ranking-card">
+                        <h3>Sumo</h3>
+                        <p id="sumoRank" class="rank-value">Unrated</p>
+                    </div>
+                    <div class="ranking-card">
+                        <h3>Bedfight</h3>
+                        <p id="bedfightRank" class="rank-value">Unrated</p>
+                    </div>
+                    <div class="ranking-card">
+                        <h3>Classic</h3>
+                        <p id="classicRank" class="rank-value">Unrated</p>
+                    </div>
+                    <div class="ranking-card">
+                        <h3>Skywars</h3>
+                        <p id="skywarsRank" class="rank-value">Unrated</p>
+                    </div>
+                    <div class="ranking-card">
+                        <h3>Boxing</h3>
+                        <p id="boxingRank" class="rank-value">Unrated</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Profile Modal -->
+    <div id="editProfileModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Edit Profile</h2>
+            <form id="editProfileForm" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label>Profile Picture:</label>
+                    <input type="file" id="profilePictureUpload" accept="image/*">
+                </div>
+                <div class="form-group">
+                    <label>IGN:</label>
+                    <input type="text" id="editIgn" required>
+                </div>
+                <div class="form-group">
+                    <label>Timezone:</label>
+                    <input type="text" id="editTimezone" required>
+                </div>
+                <div class="form-group">
+                    <label>Preferred Server:</label>
+                    <select id="editServer">
+                        <option value="US">US Server</option>
+                        <option value="EU">EU Server</option>
+                        <option value="ASIA">Asia Server</option>
+                    </select>
+                </div>
+                <button type="submit" class="submit-btn">Save Changes</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div id="changePasswordModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Change Password</h2>
+            <form id="changePasswordForm">
+                <div class="form-group">
+                    <label>Current Password:</label>
+                    <input type="password" id="currentPassword" required>
+                </div>
+                <div class="form-group">
+                    <label>New Password:</label>
+                    <input type="password" id="newPassword" required>
+                </div>
+                <div class="form-group">
+                    <label>Confirm New Password:</label>
+                    <input type="password" id="confirmPassword" required>
+                </div>
+                <button type="submit" class="submit-btn">Change Password</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
