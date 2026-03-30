@@ -344,7 +344,7 @@ const PORT = process.env.PORT || 3000;
 // Initialize database and start server
 db.init().then(() => {
   console.log('Database initialized successfully');
-  server.listen(PORT, () => {
+  server.listen(PORT, function() {
     console.log('===================================');
     console.log('Minecraft Tier Testing Server');
     console.log('===================================');
@@ -352,7 +352,7 @@ db.init().then(() => {
     console.log('Visit: http://localhost:' + PORT);
     console.log('===================================');
   });
-}).catch(err => {
+}).catch(function(err) {
   console.error('Failed to initialize database:', err);
   process.exit(1);
 });
