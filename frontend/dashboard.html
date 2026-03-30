@@ -1,0 +1,75 @@
+<div class="container dashboard-container">
+    <div class="sidebar">
+        <div class="sidebar-menu">
+            <h3>Menu</h3>
+            <ul>
+                <li><a href="#" data-section="queue">🎮 Join Queue</a></li>
+                <li><a href="#" data-section="activeTests">⚡ Active Tests</a></li>
+                <li><a href="#" data-section="myProfile">👤 My Profile</a></li>
+                <li><a href="#" data-section="rankings">📊 My Rankings</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <!-- Queue Section -->
+        <div id="queueSection" class="section active">
+            <h2>Join Testing Queue</h2>
+            <div class="queue-form">
+                <div class="gamemode-cards">
+                    <div class="gamemode-card" data-gamemode="sumo">
+                        <img src="https://via.placeholder.com/100x100?text=Sumo" alt="Sumo">
+                        <h3>Sumo</h3>
+                        <p id="sumoRating" class="rating">Unrated</p>
+                        <button class="join-queue-btn" data-gamemode="sumo">Join Queue</button>
+                    </div>
+                    <div class="gamemode-card" data-gamemode="bedfight">
+                        <img src="https://via.placeholder.com/100x100?text=Bedfight" alt="Bedfight">
+                        <h3>Bedfight</h3>
+                        <p id="bedfightRating" class="rating">Unrated</p>
+                        <button class="join-queue-btn" data-gamemode="bedfight">Join Queue</button>
+                    </div>
+                    <div class="gamemode-card" data-gamemode="classic">
+                        <img src="https://via.placeholder.com/100x100?text=Classic" alt="Classic">
+                        <h3>Classic</h3>
+                        <p id="classicRating" class="rating">Unrated</p>
+                        <button class="join-queue-btn" data-gamemode="classic">Join Queue</button>
+                    </div>
+                    <div class="gamemode-card" data-gamemode="skywars">
+                        <img src="https://via.placeholder.com/100x100?text=Skywars" alt="Skywars">
+                        <h3>Skywars</h3>
+                        <p id="skywarsRating" class="rating">Unrated</p>
+                        <button class="join-queue-btn" data-gamemode="skywars">Join Queue</button>
+                    </div>
+                    <div class="gamemode-card" data-gamemode="boxing">
+                        <img src="https://via.placeholder.com/100x100?text=Boxing" alt="Boxing">
+                        <h3>Boxing</h3>
+                        <p id="boxingRating" class="rating">Unrated</p>
+                        <button class="join-queue-btn" data-gamemode="boxing">Join Queue</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Tests Section -->
+        <div id="activeTestsSection" class="section">
+            <h2>Active Tests</h2>
+            <div id="activeTestsList" class="tests-list">
+                <p>No active tests</p>
+            </div>
+        </div>
+
+        <!-- My Profile Section -->
+        <div id="myProfileSection" class="section">
+            <h2>My Profile</h2>
+            <div id="userProfile" class="profile-info">
+                <div class="profile-header">
+                    <img id="profilePicture" src="" alt="Profile Picture" class="profile-img">
+                    <h3 id="profileUsername"></h3>
+                </div>
+                <div class="profile-details">
+                    <p><strong>IGN:</strong> <span id="profileIgn"></span></p>
+                    <p><strong>Timezone:</strong> <span id="profileTimezone"></span></p>
+                    <p><strong>Preferred Server:</strong> <span id="profileServer"></span></p>
+                </div>
+                <button id="editProfileBtn" class="edit-btn
