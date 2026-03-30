@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - MC Tier Testing</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1 class="logo">MC Tier Testing - Admin</h1>
+            <div class="nav-links">
+                <a href="index.html">Leaderboard</a>
+                <a href="dashboard.html">Dashboard</a>
+                <a href="profile.html">Profile</a>
+                <a href="forum.html">Forum</a>
+                <a href="admin.html">Admin Panel</a>
+                <a href="#" id="logoutLink">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container admin-container">
+        <div class="sidebar">
+            <div class="sidebar-menu">
+                <h3>Admin Menu</h3>
+                <ul>
+                    <li><a href="#" data-section="tickets">🎫 Tickets</a></li>
+                    <li><a href="#" data-section="addTester">👥 Add Tester</a></li>
+                    <li><a href="#" data-section="queueManagement">📋 Queue Management</a></li>
+                    <li><a href="#" data-section="userManagement">👤 User Management</a></li>
+                    <li><a href="#" data-section="systemLogs">📊 System Logs</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- Tickets Section -->
+            <div id="ticketsSection" class="section active">
+                <h2>Support Tickets</h2>
+                <div id="ticketsList" class="tickets-list">
+                    <p>Loading tickets...</p>
+                </div>
+            </div>
+
+            <!-- Add Tester Section -->
+            <div id="addTesterSection" class="section">
+                <h2>Add New Tester</h2>
+                <div class="add-tester-form">
+                    <div class="form-group">
+                        <label>Select User:</label>
+                        <select id="userToPromote">
+                            <option value="">Loading users...</option>
+                        </select>
+                    </div>
+                    <button id="promoteToTesterBtn" class="submit-btn">Promote to Tester</button>
+                    <div id="promoteResult"></div>
+                </div>
+                
+                <h2>Create Test User: SKIBIDIBOSS</h2>
+                <button id="createSkibidibossBtn" class="admin-btn">Create SKIBIDIBOSS (LT3 All)</button>
+                
+                <h2>Update User Tiers</h2>
+                <div class="update-tier-form">
+                    <div class="form-group">
+                        <label>Username:</label>
+                        <input type="text" id="updateUsername" placeholder="Username">
+                    </div>
+                    <div class="form-group">
+                        <label>Sumo Tier:</label>
+                        <select id="updateSumoTier">
+                            <option>Unrated</option><option>LT3</option><option>LT2</option><option>LT1</option>
+                            <option>HT3</option><option>HT2</option><option>HT1</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Bedfight Tier:</label>
+                        <select id="updateBedfightTier">
+                            <option>Unrated</option><option>LT3</option><option>LT2</option><option>LT1</option>
+                            <option>HT3</option><option>HT2</option><option>HT1</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Classic Tier:</label>
+                        <select id="updateClassicTier">
+                            <option>Unrated</option><option>LT3</option><option>LT2</option><option>LT1</option>
+                            <option>HT3</option><option>HT2</option><option>HT1</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Skywars Tier:</label>
+                        <select id="updateSkywarsTier">
+                            <option>Unrated</option><option>LT3</option><option>LT2</option><option>LT1</option>
+                            <option>HT3</option><option>HT2</option><option>HT1</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Boxing Tier:</label>
+                        <select id="updateBoxingTier">
+                            <option>Unrated</option><option>LT3</option><option>LT2</option><option>LT1</option>
+                            <option>HT3</option><option>HT2</option><option>HT1</option>
+                        </select>
+                    </div>
+                    <button id="updateTiersBtn" class="submit-btn">Update Tiers</button>
+                </div>
+            </div>
+
+            <!-- Queue Management Section -->
+            <div id="queueManagementSection" class="section">
+                <h2>Queue Management</h2>
+                <div id="adminQueueList" class="queue-list">
+                    <p>Loading queue...</p>
+                </div>
+            </div>
+
+            <!-- User Management Section -->
+            <div id="userManagementSection" class="section">
+                <h2>User Management</h2>
+                <div id="userManagementList" class="user-list">
+                    <p>Loading users...</p>
+                </div>
+            </div>
+
+            <!-- System Logs Section -->
+            <div id="systemLogsSection" class="section">
+                <h2>System Logs</h2>
+                <div id="systemLogs" class="logs-container">
+                    <p>Loading logs...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+</html>
