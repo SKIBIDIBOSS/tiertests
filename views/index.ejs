@@ -3,63 +3,87 @@
 <head>
     <title>SKIBIDIBOSS X LINING</title>
     <style>
-        :root { --bg: #0b0c0e; --side: #121417; --accent: #00d1ff; }
-        body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; display: flex; margin: 0; height: 100vh; }
-        .sidebar { width: 260px; background: var(--side); padding: 20px; border-right: 1px solid #222; }
-        .main { flex: 1; padding: 40px; overflow-y: auto; }
-        .forum { width: 300px; background: var(--side); border-left: 1px solid #222; display: flex; flex-direction: column; }
-        .player-row { background: #1c1e22; padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
-        .icon { width: 24px; margin-left: 5px; vertical-align: middle; }
-        .btn-test { background: var(--accent); color: black; padding: 12px; border-radius: 5px; text-decoration: none; font-weight: bold; display: block; text-align: center; }
+        :root { --bg: #0b0c0e; --side: #121417; --accent: #00d1ff; --card: #1c1e22; }
+        body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; display: grid; grid-template-columns: 260px 1fr 300px; height: 100vh; margin: 0; }
+        .sidebar { background: var(--side); padding: 25px; border-right: 1px solid #222; }
+        .main { padding: 40px; overflow-y: auto; }
+        .forum { background: var(--side); border-left: 1px solid #222; display: flex; flex-direction: column; }
+        .tier-row { background: var(--card); padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #333; }
+        .lining-top { border: 1px solid var(--accent); box-shadow: 0 0 15px rgba(0,209,255,0.2); }
+        .btn-test { background: var(--accent); color: black; padding: 12px; border-radius: 5px; text-decoration: none; font-weight: bold; border: none; cursor: pointer; width: 100%; }
+        .chat-area { flex: 1; padding: 15px; overflow-y: auto; font-size: 0.9rem; }
+        .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:100; }
+        .modal-content { background: var(--card); width: 400px; margin: 100px auto; padding: 30px; border-radius: 10px; }
+        input { width: 100%; padding: 10px; margin: 10px 0; background: #000; border: 1px solid #333; color: #fff; }
     </style>
 </head>
 <body>
     <div class="sidebar">
-        <h2>SKIBIDIBOSS X</h2>
-        <a href="/" style="color:white; text-decoration:none;">Leaderboard</a><br><br>
+        <h2 style="color:var(--accent)">SKIBIDIBOSS X</h2>
+        <a href="/" style="color:white; text-decoration:none; display:block; margin:15px 0;">Leaderboard</a>
+        <a href="#" style="color:#888; text-decoration:none; display:block; margin:15px 0;">Tickets</a>
+        <hr style="border:0; border-top:1px solid #333">
         <% if (user) { %>
-            <p>Logged as: <%= user.username %></p>
-            <a href="/logout" style="color:#555;">Logout</a>
+            <p>Welcome, <%= user.username %></p>
+            <a href="/logout" style="color:#ff4757">Logout</a>
         <% } else { %>
-            <a href="/login" class="btn-test">Staff Login</a>
+            <form action="/login" method="POST">
+                <input type="text" name="username" placeholder="Login">
+                <input type="password" name="password" placeholder="Pass">
+                <button type="submit" class="btn-test">Login</button>
+            </form>
         <% } %>
     </div>
 
     <div class="main">
         <h1>Leaderboard</h1>
-        <div class="player-row" style="border: 1px solid gold;">
-            <span>1. <b>lining</b> (lining123) ⚔️🛡️🏹</span>
-            <span>Sumo: LT2 | Bedfight: HT2 | Classic: HT3</span>
+        <div class="tier-row lining-top">
+            <span><b>lining</b> ⚔️🛡️🏹👑</span>
+            <span>Sumo: LT2 | Bed: HT2 | Classic: HT3</span>
         </div>
-        <% players.forEach((p, i) => { %>
-            <div class="player-row">
-                <span><%= i+2 %>. <img src="<%= p.pfp %>" width="20"> <b><%= p.username %></b></span>
-                <span>S: <%= p.ranks.sumo %> | B: <%= p.ranks.bedfight %></span>
-            </div>
+        <div class="tier-row">
+            <span><b>skibidiboss</b> ⚔️🛡️</span>
+            <span>Sumo: LT3 | Bedfight: LT3</span>
+        </div>
+        <% players.forEach(p => { %>
+            <% if(p.username !== 'lining' && p.username !== 'skibidiboss') { %>
+                <div class="tier-row">
+                    <span><img src="<%= p.pfp %>" width="20"> <%= p.username %></span>
+                    <span>Sumo: <%= p.ranks.sumo %></span>
+                </div>
+            <% } %>
         <% }) %>
-        <br>
-        <div style="background:#1c1e22; padding: 20px; border-radius: 10px; text-align: center;">
+
+        <div style="margin-top:50px; text-align:center;">
             <h3>Want to join? Get tested now</h3>
-            <button onclick="document.getElementById('qModal').style.display='block'" class="btn-test">JOIN QUEUE</button>
+            <button class="btn-test" style="width:200px" onclick="document.getElementById('qModal').style.display='block'">JOIN QUEUE</button>
         </div>
     </div>
 
     <div class="forum">
-        <div style="padding:15px; border-bottom:1px solid #222;">Public Forum</div>
-        <div style="flex:1; padding:10px; font-size: 0.8rem;">
+        <div style="padding:15px; font-weight:bold; border-bottom:1px solid #333;">PUBLIC FORUM</div>
+        <div class="chat-area">
             <% chat.forEach(m => { %>
-                <div><b><%= m.username %>:</b> <%= m.text %></div>
+                <div style="margin-bottom:10px">
+                    <b style="color:var(--accent)"><%= m.username %>:</b> <%= m.text %>
+                </div>
             <% }) %>
         </div>
+        <form action="/chat/send" method="POST" style="padding:15px;">
+            <input type="text" name="text" placeholder="Type a message..." required>
+        </form>
     </div>
 
-    <div id="qModal" style="display:none; position:fixed; background:rgba(0,0,0,0.8); width:100%; height:100%; top:0; left:0; padding:100px;">
-        <div style="background:#1c1e22; padding:30px; width:400px; margin:auto; border-radius:10px;">
+    <div id="qModal" class="modal">
+        <div class="modal-content">
+            <h2>Test Application</h2>
             <form action="/queue/join" method="POST">
-                <input type="text" name="ign" placeholder="Minecraft IGN" required><br><br>
-                <input type="text" name="timezone" placeholder="Timezone (EST/GMT)" required><br><br>
-                <select name="server"><option>NA</option><option>EU</option><option>AS</option></select><br><br>
+                <input type="hidden" name="username" value="<%= user ? user.username : 'Guest' %>">
+                <input type="text" name="ign" placeholder="Minecraft IGN" required>
+                <input type="text" name="timezone" placeholder="Timezone (e.g. EST)" required>
+                <input type="text" name="server" placeholder="Preferred Server (NA/EU)" required>
                 <button type="submit" class="btn-test">Submit Application</button>
+                <button type="button" onclick="document.getElementById('qModal').style.display='none'" style="background:none; color:white; border:none; margin-top:10px; cursor:pointer;">Cancel</button>
             </form>
         </div>
     </div>
