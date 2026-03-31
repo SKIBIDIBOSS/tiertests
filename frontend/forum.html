@@ -1,27 +1,246 @@
-io.on('connection', (socket) => {
-    console.log('User connected');
-    
-    socket.on('join-chat', (username) => {
-        socket.join('general-chat');
-        socket.username = username;
-        
-        // Update online users
-        const onlineUsers = [];
-        for (let [id, socket] of io.sockets.sockets) {
-            if (socket.username) onlineUsers.push(socket.username);
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forum - MC Tier Testing</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .forum-container {
+            background: #2c2f33;
+            color: #dcddde;
+            border-radius: 10px;
+            padding: 0;
+            display: flex;
+            height: 600px;
         }
-        io.emit('online-users', onlineUsers);
-    });
-    
-    socket.on('chat-message', (data) => {
-        io.to('general-chat').emit('chat-message', data);
-    });
-    
-    socket.on('disconnect', () => {
-        const onlineUsers = [];
-        for (let [id, socket] of io.sockets.sockets) {
-            if (socket.username) onlineUsers.push(socket.username);
+        .forum-sidebar {
+            width: 250px;
+            background: #23272a;
+            border-right: 1px solid #202225;
+            padding: 1rem;
+            overflow-y: auto;
         }
-        io.emit('online-users', onlineUsers);
-    });
-});
+        .forum-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .forum-header {
+            background: #2c2f33;
+            padding: 1rem;
+            border-bottom: 1px solid #202225;
+        }
+        .forum-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+        .forum-input {
+            padding: 1rem;
+            border-top: 1px solid #202225;
+        }
+        .message {
+            display: flex;
+            margin-bottom: 1rem;
+            gap: 0.75rem;
+        }
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #7289da;
+            flex-shrink: 0;
+        }
+        .message-content {
+            flex: 1;
+        }
+        .message-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.25rem;
+        }
+        .message-username {
+            font-weight: 600;
+        }
+        .message-username.admin {
+            color: #ff6b6b;
+        }
+        .message-username.tester {
+            color: #4ecdc4;
+        }
+        .message-username.normal {
+            color: #dcddde;
+        }
+        .message-role {
+            font-size: 0.75rem;
+            padding: 0.125rem 0.5rem;
+            border-radius: 3px;
+            background: rgba(255,255,255,0.1);
+        }
+        .message-role.admin {
+            background: rgba(255,107,107,0.2);
+            color: #ff6b6b;
+        }
+        .message-role.tester {
+            background: rgba(78,205,196,0.2);
+            color: #4ecdc4;
+        }
+        .message-timestamp {
+            font-size: 0.75rem;
+            color: #72767d;
+        }
+        .message-text {
+            color: #dcddde;
+            word-wrap: break-word;
+        }
+        .forum-input-area {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .forum-input-area input {
+            flex: 1;
+            background: #40444b;
+            border: 1px solid #202225;
+            color: #dcddde;
+            padding: 0.75rem;
+            border-radius: 5px;
+        }
+        .forum-input-area button {
+            background: #7289da;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .forum-channel {
+            padding: 0.5rem;
+            margin: 0.25rem 0;
+            border-radius: 5px;
+            cursor: pointer;
+            color: #72767d;
+            transition: all 0.2s;
+        }
+        .forum-channel:hover {
+            background: #2c2f33;
+            color: #dcddde;
+        }
+        .forum-channel.active {
+            background: #7289da;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1 class="logo">MC Tier Testing</h1>
+            <div class="nav-links">
+                <a href="index.html">Leaderboard</a>
+                <a href="dashboard.html">Dashboard</a>
+                <a href="profile.html">Profile</a>
+                <a href="forum.html">Forum</a>
+                <a href="#" id="authLink">Login</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="forum-container">
+            <div class="forum-sidebar">
+                <h3 style="margin-bottom: 1rem;">Channels</h3>
+                <div class="forum-channel active" data-channel="general">
+                    # general
+                </div>
+                <div class="forum-channel" data-channel="announcements">
+                    # announcements
+                </div>
+                <div class="forum-channel" data-channel="support">
+                    # support
+                </div>
+            </div>
+            <div class="forum-main">
+                <div class="forum-header">
+                    <h2 id="channelName"># general</h2>
+                </div>
+                <div class="forum-messages" id="forumMessages"></div>
+                <div class="forum-input">
+                    <div class="forum-input-area">
+                        <input type="text" id="messageInput" placeholder="Send a message...">
+                        <button id="sendBtn">Send</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let currentChannel = 'general';
+        let currentUser = null;
+
+        // Check auth
+        fetch('/api/check-auth').then(r => r.json()).then(data => {
+            if (data.authenticated) {
+                currentUser = data;
+                socket.emit('join-chat', data.username);
+            }
+        });
+
+        // Channel switching
+        document.querySelectorAll('.forum-channel').forEach(ch => {
+            ch.addEventListener('click', () => {
+                document.querySelectorAll('.forum-channel').forEach(c => c.classList.remove('active'));
+                ch.classList.add('active');
+                currentChannel = ch.dataset.channel;
+                document.getElementById('channelName').textContent = '# ' + currentChannel;
+                document.getElementById('forumMessages').innerHTML = '';
+            });
+        });
+
+        // Send message
+        document.getElementById('sendBtn').addEventListener('click', () => {
+            const input = document.getElementById('messageInput');
+            if (input.value.trim()) {
+                socket.emit('chat-message', {
+                    username: currentUser.username,
+                    message: input.value,
+                    channel: currentChannel,
+                    isAdmin: currentUser.isAdmin,
+                    timestamp: new Date()
+                });
+                input.value = '';
+            }
+        });
+
+        // Receive messages
+        socket.on('chat-message', (data) => {
+            if (data.channel !== currentChannel) return;
+            
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'message';
+            
+            const role = data.isAdmin ? 'admin' : 'normal';
+            const roleText = data.isAdmin ? 'ADMIN' : '';
+            
+            msgDiv.innerHTML = `
+                <div class="message-avatar"></div>
+                <div class="message-content">
+                    <div class="message-header">
+                        <span class="message-username ${role}">${data.username}</span>
+                        ${roleText ? `<span class="message-role ${role}">${roleText}</span>` : ''}
+                        <span class="message-timestamp">${new Date(data.timestamp).toLocaleTimeString()}</span>
+                    </div>
+                    <div class="message-text">${data.message}</div>
+                </div>
+            `;
+            
+            document.getElementById('forumMessages').appendChild(msgDiv);
+            document.getElementById('forumMessages').scrollTop = document.getElementById('forumMessages').scrollHeight;
+        });
+    </script>
+</body>
+</html>
