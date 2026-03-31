@@ -1,91 +1,130 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>SKIBIDIBOSS X LINING</title>
+    <meta charset="UTF-8">
+    <title>SKIBIDIBOSS X LINING | TIER HUB</title>
     <style>
-        :root { --bg: #0b0c0e; --side: #121417; --accent: #00d1ff; --card: #1c1e22; }
-        body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; display: grid; grid-template-columns: 260px 1fr 300px; height: 100vh; margin: 0; }
-        .sidebar { background: var(--side); padding: 25px; border-right: 1px solid #222; }
-        .main { padding: 40px; overflow-y: auto; }
-        .forum { background: var(--side); border-left: 1px solid #222; display: flex; flex-direction: column; }
-        .tier-row { background: var(--card); padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #333; }
-        .lining-top { border: 1px solid var(--accent); box-shadow: 0 0 15px rgba(0,209,255,0.2); }
-        .btn-test { background: var(--accent); color: black; padding: 12px; border-radius: 5px; text-decoration: none; font-weight: bold; border: none; cursor: pointer; width: 100%; }
-        .chat-area { flex: 1; padding: 15px; overflow-y: auto; font-size: 0.9rem; }
-        .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:100; }
-        .modal-content { background: var(--card); width: 400px; margin: 100px auto; padding: 30px; border-radius: 10px; }
-        input { width: 100%; padding: 10px; margin: 10px 0; background: #000; border: 1px solid #333; color: #fff; }
+        :root {
+            --bg: #090a0b;
+            --sidebar: #111214;
+            --card: #18191c;
+            --accent: #00d1ff;
+            --text: #ffffff;
+            --muted: #8e9297;
+        }
+        body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; display: flex; height: 100vh; overflow: hidden; }
+
+        /* SIDEBAR */
+        .sidebar { width: 260px; background: var(--sidebar); border-right: 1px solid #222; display: flex; flex-direction: column; padding: 25px; }
+        .logo { font-size: 1.2rem; font-weight: 800; color: var(--accent); margin-bottom: 40px; letter-spacing: 1px; }
+        .nav-item { padding: 12px; color: var(--muted); text-decoration: none; border-radius: 8px; margin-bottom: 5px; font-weight: 600; display: flex; align-items: center; }
+        .nav-item:hover, .active { background: #222; color: #fff; }
+        
+        /* MAIN CONTENT */
+        .main { flex: 1; padding: 40px; overflow-y: auto; }
+        .leaderboard-table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 12px; overflow: hidden; }
+        .leaderboard-table th { text-align: left; padding: 15px; color: var(--muted); background: rgba(0,0,0,0.2); }
+        .leaderboard-table td { padding: 15px; border-bottom: 1px solid #222; }
+        .lining-row { border-left: 4px solid var(--accent); background: rgba(0,209,255,0.05); }
+
+        /* STATUS SECTION */
+        .auth-prompt { margin-top: 30px; padding: 20px; background: var(--card); border-radius: 12px; display: flex; align-items: center; }
+        .glow-dot { width: 10px; height: 10px; background: #2ecc71; border-radius: 50%; box-shadow: 0 0 10px #2ecc71; margin-right: 15px; }
+
+        /* DISCORD FORUM */
+        .forum { width: 320px; background: var(--sidebar); border-left: 1px solid #222; display: flex; flex-direction: column; }
+        .chat-header { padding: 20px; font-weight: 700; border-bottom: 1px solid #222; }
+        .messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .msg { font-size: 0.9rem; }
+        .msg.admin { color: #ff4757; }
+        .msg.tester { color: #00d1ff; }
+        .msg.user { color: #ffffff; }
+        .chat-input { padding: 15px; background: #1e1f22; border: none; color: white; width: 100%; box-sizing: border-box; }
+
+        /* QUEUE CARDS */
+        .queue-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+        .q-card { background: var(--card); padding: 15px; border-radius: 10px; text-align: center; border: 1px solid #333; }
+        .q-card img { width: 100%; height: 80px; object-fit: cover; border-radius: 5px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
+
     <div class="sidebar">
-        <h2 style="color:var(--accent)">SKIBIDIBOSS X</h2>
-        <a href="/" style="color:white; text-decoration:none; display:block; margin:15px 0;">Leaderboard</a>
-        <a href="#" style="color:#888; text-decoration:none; display:block; margin:15px 0;">Tickets</a>
-        <hr style="border:0; border-top:1px solid #333">
-        <% if (user) { %>
-            <p>Welcome, <%= user.username %></p>
-            <a href="/logout" style="color:#ff4757">Logout</a>
-        <% } else { %>
-            <form action="/login" method="POST">
-                <input type="text" name="username" placeholder="Login">
-                <input type="password" name="password" placeholder="Pass">
-                <button type="submit" class="btn-test">Login</button>
-            </form>
-        <% } %>
+        <div class="logo">SKIBIDIBOSS X LINING</div>
+        <a href="/" class="nav-item active">🏠 Home</a>
+        <a href="#" class="nav-item">💬 Forum</a>
+        <a href="#" class="nav-item">⚔️ Join Queue</a>
+        
+        <div style="margin-top: auto;">
+            <% if (!user) { %>
+                <form action="/login" method="POST">
+                    <input type="text" name="username" placeholder="Username" style="width:100%; padding:8px; margin-bottom:5px; background:#000; border:1px solid #333; color:#fff;">
+                    <input type="password" name="password" placeholder="Password" style="width:100%; padding:8px; margin-bottom:10px; background:#000; border:1px solid #333; color:#fff;">
+                    <button style="width:100%; background:var(--accent); color:#000; border:none; padding:10px; font-weight:bold; border-radius:5px;">Login</button>
+                </form>
+            <% } else { %>
+                <div style="color:var(--accent)">Logged in as <%= user.username %></div>
+            <% } %>
+        </div>
     </div>
 
     <div class="main">
-        <h1>Leaderboard</h1>
-        <div class="tier-row lining-top">
-            <span><b>lining</b> ⚔️🛡️🏹👑</span>
-            <span>Sumo: LT2 | Bed: HT2 | Classic: HT3</span>
-        </div>
-        <div class="tier-row">
-            <span><b>skibidiboss</b> ⚔️🛡️</span>
-            <span>Sumo: LT3 | Bedfight: LT3</span>
-        </div>
-        <% players.forEach(p => { %>
-            <% if(p.username !== 'lining' && p.username !== 'skibidiboss') { %>
-                <div class="tier-row">
-                    <span><img src="<%= p.pfp %>" width="20"> <%= p.username %></span>
-                    <span>Sumo: <%= p.ranks.sumo %></span>
-                </div>
-            <% } %>
-        <% }) %>
+        <h1>Global Leaderboard</h1>
+        <table class="leaderboard-table">
+            <thead>
+                <tr><th>Player</th><th>Sumo</th><th>Bedfight</th><th>Classic</th></tr>
+            </thead>
+            <tbody>
+                <tr class="lining-row">
+                    <td><b>lining</b> ⚔️</td><td>LT2</td><td>HT2</td><td>HT3</td>
+                </tr>
+                <tr>
+                    <td><b>skibidiboss</b></td><td>LT3</td><td>LT3</td><td>Unrated</td>
+                </tr>
+                <% players.forEach(p => { %>
+                    <tr>
+                        <td><%= p.username %></td><td><%= p.ranks.sumo %></td><td><%= p.ranks.bedfight %></td><td><%= p.ranks.classic %></td>
+                    </tr>
+                <% }) %>
+            </tbody>
+        </table>
 
-        <div style="margin-top:50px; text-align:center;">
-            <h3>Want to join? Get tested now</h3>
-            <button class="btn-test" style="width:200px" onclick="document.getElementById('qModal').style.display='block'">JOIN QUEUE</button>
+        <div class="auth-prompt">
+            <div class="glow-dot"></div>
+            <span>Want to get tested? <a href="#" style="color:var(--accent)">Sign up</a> or already have an account? <a href="#" style="color:var(--accent)">Login</a></span>
+        </div>
+
+        <h2 style="margin-top:40px;">Active Queues</h2>
+        <div class="queue-grid">
+            <div class="q-card">
+                <img src="https://i.imgur.com/8QG9v2S.png" alt="Sumo">
+                <b>Sumo 1v1</b>
+                <button style="display:block; width:100%; margin-top:10px; background:#222; color:#fff; border:none; padding:8px; border-radius:4px;">Join Queue</button>
+            </div>
+            <div class="q-card">
+                <img src="https://i.imgur.com/L1ZzZ6U.png" alt="Bedfight">
+                <b>Bedfight 1v1</b>
+                <button style="display:block; width:100%; margin-top:10px; background:#222; color:#fff; border:none; padding:8px; border-radius:4px;">Join Queue</button>
+            </div>
         </div>
     </div>
 
     <div class="forum">
-        <div style="padding:15px; font-weight:bold; border-bottom:1px solid #333;">PUBLIC FORUM</div>
-        <div class="chat-area">
+        <div class="chat-header">FORUM DISCUSSION</div>
+        <div class="messages">
             <% chat.forEach(m => { %>
-                <div style="margin-bottom:10px">
-                    <b style="color:var(--accent)"><%= m.username %>:</b> <%= m.text %>
+                <div class="msg <%= m.role %>">
+                    <b style="font-size: 0.75rem; display:block;"><%= m.username %></b>
+                    <%= m.text %>
                 </div>
             <% }) %>
         </div>
-        <form action="/chat/send" method="POST" style="padding:15px;">
-            <input type="text" name="text" placeholder="Type a message..." required>
-        </form>
+        <% if (user) { %>
+            <form action="/chat/send" method="POST">
+                <input type="text" name="text" class="chat-input" placeholder="Message #global...">
+            </form>
+        <% } %>
     </div>
 
-    <div id="qModal" class="modal">
-        <div class="modal-content">
-            <h2>Test Application</h2>
-            <form action="/queue/join" method="POST">
-                <input type="hidden" name="username" value="<%= user ? user.username : 'Guest' %>">
-                <input type="text" name="ign" placeholder="Minecraft IGN" required>
-                <input type="text" name="timezone" placeholder="Timezone (e.g. EST)" required>
-                <input type="text" name="server" placeholder="Preferred Server (NA/EU)" required>
-                <button type="submit" class="btn-test">Submit Application</button>
-                <button type="button" onclick="document.getElementById('qModal').style.display='none'" style="background:none; color:white; border:none; margin-top:10px; cursor:pointer;">Cancel</button>
-            </form>
-        </div>
-    </div>
 </body>
 </html>
