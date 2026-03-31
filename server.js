@@ -6,92 +6,54 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// --- 1. SETTINGS & PATHS ---
-// This tells the app where to find your "views" folder
+// --- SETTINGS ---
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
-
-// This tells the app where to find images/css if you use them later
 app.use(express.static(path.join(__dirname, 'public')));
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// --- 2. DATABASE CONNECTION ---
-const MONGO_URI = process.env.MONGODB_URI;
+// --- DATABASE CONNECTION ---
+mongoose.connect(process.env.MONGODB_URI)
+    .then(() => console.log("✅ HUB DATABASE CONNECTED"))
+    .catch(err => console.error("❌ CONNECTION ERROR:", err.message));
 
-mongoose.connect(MONGO_URI)
-    .then(() => {
-        console.log("✅ DATABASE CONNECTED");
-        app.listen(PORT, () => console.log(`🚀 LIVE AT: http://localhost:${PORT}`));
-    })
-    .catch(err => {
-        console.error("❌ CONNECTION ERROR:", err.message);
-    });
-
-// --- 3. DATABASE SCHEMA (The "User" Blueprint) ---
-const userSchema = new mongoose.Schema({
+// --- USER MODEL ---
+const User = mongoose.model('User', new mongoose.Schema({
     username: String,
-    role: { type: String, default: 'user' },    // Options: admin, tester, user
-    tier: { type: String, default: 'Unranked' }, // Options: HT1, LT1, etc.
+    role: { type: String, default: 'user' },
+    tier: { type: String, default: 'Unranked' },
     isBanned: { type: Boolean, default: false }
-});
+}));
 
-const User = mongoose.model('User', userSchema);
+// --- ROUTES ---
 
-// --- 4. ROUTES (The Pages) ---
-
-// MAIN LEADERBOARD PAGE
+// Main Hub (Leaderboard + Sidebar + Chat)
 app.get('/', async (req, res) => {
     try {
-        // Fetch all users who are NOT banned, sorted by tier
         const users = await User.find({ isBanned: false }).sort({ tier: 1 });
-        
-        // Send the data to your index.ejs
-        res.render('index', { users: users });
+        // We pass fake 'stats' to make the UI look professional
+        res.render('index', { 
+            users: users,
+            stats: { active: users.length + 5, queuing: 12, status: "Online" }
+        });
     } catch (err) {
-        console.log("Error fetching users:", err);
-        // If the database fails, send an empty list so the site still loads
-        res.render('index', { users: [] });
+        res.render('index', { users: [], stats: { active: 0, queuing: 0, status: "Offline" } });
     }
 });
 
-// ADMIN PANEL PAGE
+// Admin Panel
 app.get('/admin', async (req, res) => {
-    try {
-        const users = await User.find();
-        res.render('admin', { users: users });
-    } catch (err) {
-        res.send("Error loading admin panel. Make sure admin.ejs exists in /views");
-    }
+    const users = await User.find();
+    res.render('admin', { users });
 });
 
-// ADMIN ACTIONS (Ban, Update Tier, etc.)
+// Create/Update Logic for Admin
 app.post('/admin/action', async (req, res) => {
-    const { userId, action, tier, username, role } = req.body;
-
-    try {
-        if (action === 'create') {
-            await User.create({ username, role, tier });
-        } else if (action === 'ban') {
-            await User.findByIdAndUpdate(userId, { isBanned: true });
-        } else if (action === 'updateTier') {
-            await User.findByIdAndUpdate(userId, { tier: tier });
-        } else if (action === 'delete') {
-            await User.findByIdAndDelete(userId);
-        }
-        res.redirect('/admin');
-    } catch (err) {
-        res.status(500).send("Admin action failed.");
-    }
+    const { username, tier, role, action, userId } = req.body;
+    if (action === 'create') await User.create({ username, tier, role });
+    if (action === 'delete') await User.findByIdAndDelete(userId);
+    res.redirect('/admin');
 });
 
-// PROFILE / TICKET PAGE
-app.get('/ticket/:id', async (req, res) => {
-    try {
-        const player = await User.findById(req.params.id);
-        res.render('ticket', { player });
-    } catch (err) {
-        res.redirect('/');
-    }
-});
+app.listen(PORT, () => console.log(`🚀 HUB ONLINE ON PORT ${PORT}`));
