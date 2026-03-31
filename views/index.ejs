@@ -6,162 +6,194 @@
     <title>HUB | COMPETITIVE OPERATIONS</title>
     <style>
         :root {
-            --primary: #5865f2;
-            --glow: #7289da;
-            --bg: #090a0b;
-            --sidebar-bg: #111214;
-            --card-bg: #18191c;
+            --bg: #0b0c0e;
+            --sidebar: #121417;
             --accent: #00d1ff;
-            --text: #ffffff;
+            --accent-glow: rgba(0, 209, 255, 0.3);
+            --card: #1c1e22;
+            --text-main: #ffffff;
+            --text-dim: #8e9297;
         }
 
         body {
-            background-color: var(--bg);
-            color: var(--text);
-            font-family: 'Inter', sans-serif;
             margin: 0;
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
             display: grid;
-            grid-template-columns: 260px 1fr 300px; /* Sidebar | Content | Chat */
+            grid-template-columns: 280px 1fr 320px; /* Sidebar | Main | Chat */
             height: 100vh;
             overflow: hidden;
         }
 
         /* --- SIDEBAR --- */
-        nav {
-            background: var(--sidebar-bg);
+        .sidebar {
+            background: var(--sidebar);
             border-right: 1px solid rgba(255,255,255,0.05);
-            padding: 30px 20px;
+            padding: 40px 20px;
             display: flex;
             flex-direction: column;
-            gap: 10px;
         }
 
-        .logo { font-size: 1.5rem; font-weight: 800; margin-bottom: 40px; color: var(--accent); text-shadow: 0 0 10px var(--accent); }
-        
-        .nav-item {
-            padding: 12px 15px;
-            border-radius: 8px;
-            color: #8e9297;
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 900;
+            letter-spacing: -1px;
+            margin-bottom: 50px;
+            background: linear-gradient(to bottom, #fff, var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-link {
+            padding: 14px 18px;
+            color: var(--text-dim);
             text-decoration: none;
+            border-radius: 10px;
+            margin-bottom: 8px;
             font-weight: 600;
-            transition: 0.3s;
+            transition: 0.2s;
         }
 
-        .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.05); color: #fff; box-shadow: inset 4px 0 0 var(--accent); }
+        .nav-link:hover, .nav-link.active {
+            background: rgba(255,255,255,0.05);
+            color: #fff;
+            box-shadow: inset 4px 0 0 var(--accent);
+        }
 
-        .get-tested-box {
+        .btn-test {
             margin-top: auto;
-            background: linear-gradient(45deg, #5865f2, #00d1ff);
-            padding: 15px;
-            border-radius: 12px;
+            background: linear-gradient(45deg, var(--accent), #5865f2);
+            padding: 20px;
+            border-radius: 14px;
             text-align: center;
-            font-size: 0.85rem;
-            font-weight: bold;
+            font-weight: 800;
             cursor: pointer;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
         }
 
         /* --- MAIN CONTENT --- */
-        main { padding: 40px; overflow-y: auto; }
-        
-        .header-section { margin-bottom: 30px; }
-        h1 { font-size: 2.2rem; text-transform: uppercase; letter-spacing: -1px; }
-        
-        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }
-        .stat-card { background: var(--card-bg); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); }
-        .stat-card small { color: #8e9297; text-transform: uppercase; font-size: 0.7rem; }
-        .stat-card div { font-size: 1.5rem; font-weight: bold; margin-top: 5px; color: var(--accent); }
+        main { padding: 50px; overflow-y: auto; }
 
-        .leaderboard-table {
-            width: 100%;
-            background: var(--card-bg);
-            border-radius: 12px;
-            border-collapse: collapse;
-            overflow: hidden;
+        .glow-title {
+            font-size: 3.5rem;
+            text-transform: uppercase;
+            margin: 0;
+            text-shadow: 0 0 20px var(--accent-glow);
         }
 
-        .leaderboard-table th { background: rgba(0,0,0,0.2); padding: 15px; text-align: left; color: #8e9297; font-size: 0.8rem; }
-        .leaderboard-table td { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+        .slogan { color: var(--text-dim); letter-spacing: 3px; margin-bottom: 40px; }
 
-        .tier-tag { padding: 4px 10px; border-radius: 6px; background: #2f3136; border: 1px solid var(--accent); font-size: 0.75rem; }
+        .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 40px; }
+        .stat-box { background: var(--card); padding: 25px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.03); }
+        .stat-box label { color: var(--text-dim); font-size: 0.75rem; text-transform: uppercase; }
+        .stat-box div { font-size: 1.8rem; font-weight: 800; color: var(--accent); }
 
-        /* --- CHAT/FORUM SIDEBAR --- */
-        aside {
-            background: var(--sidebar-bg);
+        .rank-table {
+            width: 100%;
+            background: var(--card);
+            border-radius: 15px;
+            border-collapse: collapse;
+        }
+
+        .rank-table th { text-align: left; padding: 20px; color: var(--text-dim); font-size: 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .rank-table td { padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.02); }
+
+        .tier-badge {
+            background: #000;
+            border: 1px solid var(--accent);
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
+        /* --- CHAT --- */
+        .chat-area {
+            background: var(--sidebar);
             border-left: 1px solid rgba(255,255,255,0.05);
             display: flex;
             flex-direction: column;
         }
 
-        .chat-header { padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.05); font-weight: bold; }
-        .chat-messages { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; }
-        .msg { font-size: 0.85rem; }
-        .msg b { color: var(--accent); display: block; margin-bottom: 2px; }
-        .msg p { margin: 0; color: #dcddde; }
+        .chat-head { padding: 30px; font-weight: 800; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+        .msg-item { font-size: 0.9rem; border-left: 2px solid var(--accent); padding-left: 10px; }
+        .msg-item b { color: var(--accent); display: block; }
+        
+        .chat-input {
+            margin: 20px;
+            padding: 15px;
+            background: #1e2024;
+            border: none;
+            border-radius: 8px;
+            color: white;
+        }
 
-        .chat-input { padding: 20px; background: #1e1f22; border: none; color: white; width: 100%; box-sizing: border-box; }
+        /* Role Colors */
+        .admin { color: #ff4757; }
+        .tester { color: #1e90ff; }
     </style>
 </head>
 <body>
 
-    <nav>
-        <div class="logo">OPERATIONS</div>
-        <a href="/" class="nav-item active">Leaderboard</a>
-        <a href="/queues" class="nav-item">Matchmaking Queues</a>
-        <a href="/forum" class="nav-item">Forum/Discussions</a>
-        <a href="/profile" class="nav-item">My Profile</a>
-        <a href="/admin" class="nav-item" style="margin-top: 20px; opacity: 0.5;">Staff Panel</a>
-        
-        <div class="get-tested-box">
-            GET TESTED NOW
-            <div style="font-size: 0.7rem; font-weight: normal; opacity: 0.8;">Apply for Rank Assessment</div>
+    <div class="sidebar">
+        <div class="logo">CORE_HUB</div>
+        <a href="/" class="nav-link active">Leaderboard</a>
+        <a href="#" class="nav-link">Live Queues</a>
+        <a href="#" class="nav-link">Community Forum</a>
+        <a href="#" class="nav-link">My Profile</a>
+        <a href="/admin" class="nav-link" style="opacity: 0.3;">System Admin</a>
+
+        <div class="btn-test">
+            GET TESTED
+            <div style="font-size: 0.6rem; font-weight: 400;">Apply for Tier Ranking</div>
         </div>
-    </nav>
+    </div>
 
     <main>
-        <div class="header-section">
-            <h1>Global Leaderboard</h1>
-            <p style="color: #8e9297;">Live rankings for the current competitive season.</p>
+        <h1 class="glow-title">Rankings</h1>
+        <div class="slogan">OFFICIAL COMPETITIVE OPERATIONS DATA</div>
+
+        <div class="stats-row">
+            <div class="stat-box"><label>Operatives</label><div><%= stats.active %></div></div>
+            <div class="stat-box"><label>In Queue</label><div><%= stats.queuing %></div></div>
+            <div class="stat-box"><label>System</label><div style="color: #4cd137;"><%= stats.status %></div></div>
         </div>
 
-        <div class="stats-grid">
-            <div class="stat-card"><small>Active Users</small><div><%= users.length %></div></div>
-            <div class="stat-card"><small>In Queue</small><div>12 Players</div></div>
-            <div class="stat-card"><small>Server Status</small><div style="color: #43b581;">Online</div></div>
-        </div>
-
-        <table class="leaderboard-table">
+        <table class="rank-table">
             <thead>
                 <tr>
-                    <th>PLAYER IDENTITY</th>
+                    <th>IDENTITY</th>
                     <th>RANKING</th>
-                    <th>STATUS</th>
+                    <th>PROFILE</th>
                 </tr>
             </thead>
             <tbody>
                 <% if (users.length > 0) { %>
                     <% users.forEach(user => { %>
                         <tr>
-                            <td style="font-weight: bold;"><%= user.username %></td>
-                            <td><span class="tier-tag"><%= user.tier %></span></td>
-                            <td><a href="/profile/<%= user._id %>" style="color: var(--accent); text-decoration: none; font-size: 0.8rem;">VIEW PROFILE</a></td>
+                            <td class="<%= user.role %>" style="font-weight: 700;"><%= user.username %></td>
+                            <td><span class="tier-badge"><%= user.tier %></span></td>
+                            <td><a href="#" style="color: var(--accent); text-decoration: none; font-size: 0.8rem;">OPEN DATA</a></td>
                         </tr>
                     <% }) %>
                 <% } else { %>
-                    <tr><td colspan="3" style="text-align: center; padding: 40px; color: #8e9297;">No records found. Syncing database...</td></tr>
+                    <tr><td colspan="3" style="text-align: center; color: var(--text-dim); padding: 40px;">No players synced. Visit Admin to add users.</td></tr>
                 <% } %>
             </tbody>
         </table>
     </main>
 
-    <aside>
-        <div class="chat-header">COMMUNITY CHAT</div>
-        <div class="chat-messages">
-            <div class="msg"><b>System</b><p>Welcome to the Hub. Type /help for commands.</p></div>
-            <div class="msg"><b>User_42</b><p>Looking for LT1 scrims tonight!</p></div>
-            <div class="msg"><b>Staff_Alpha</b><p>Rank resets happening in 48 hours.</p></div>
+    <div class="chat-area">
+        <div class="chat-head"># GLOBAL_CHAT</div>
+        <div class="messages">
+            <div class="msg-item"><b>System</b>Connect successful. Monitoring communications.</div>
+            <div class="msg-item"><b>Ghost_99</b>Anyone up for LT1 testing?</div>
+            <div class="msg-item"><b>Staff_Rex</b>Server maintenance in 2 hours.</div>
         </div>
-        <input type="text" class="chat-input" placeholder="Message #global...">
-    </aside>
+        <input type="text" class="chat-input" placeholder="Secure message...">
+    </div>
 
 </body>
 </html>
