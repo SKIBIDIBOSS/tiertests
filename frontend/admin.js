@@ -303,3 +303,82 @@ window.showResetPassword = showResetPassword;
 window.deleteUser = deleteUser;
 window.editUserTiers = editUserTiers;
 window.removeFromQueue = removeFromQueue;
+// Load all users
+async function loadAllUsers() {
+    try {
+        const res = await fetch('/api/users');
+        const users = await res.json();
+        const grid = document.getElementById('userGrid');
+        grid.innerHTML = '';
+        
+        users.forEach(user => {
+            const card = document.createElement('div');
+            card.style.cssText = 'background: white; padding: 1rem; border-radius: 8px; border: 1px solid #ddd;';
+            card.innerHTML = `
+                <h4>${user.username}</h4>
+                <p><strong>IGN:</strong> ${user.ign}</p>
+                <p><strong>Joined:</strong> ${new Date(user.created_at).toLocaleDateString()}</p>
+                <p><strong>Tiers:</strong></p>
+                <div style="font-size: 0.9rem;">
+                    Sumo: ${user.sumo_tier || 'Unrated'}<br>
+                    Bedfight: ${user.bedfight_tier || 'Unrated'}<br>
+                    Classic: ${user.classic_tier || 'Unrated'}<br>
+                    Skywars: ${user.skywars_tier || 'Unrated'}<br>
+                    Boxing: ${user.boxing_tier || 'Unrated'}
+                </div>
+                <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+                    <button class="admin-btn" onclick="editUserTiers(${user.id})">Edit Tiers</button>
+                    <button class="admin-btn admin-btn-danger" onclick="banUser(${user.id}, '${user.username}')">Ban</button>
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+    } catch (error) {
+        console.error('Error loading users:', error);
+    }
+}
+
+async function editUserTiers(userId) {
+    const sumo = prompt('Sumo tier (LT3, LT2, LT1, HT3, HT2, HT1, Unrated):');
+    if (!sumo) return;
+    const bedfight = prompt('Bedfight tier:');
+    if (!bedfight) return;
+    const classic = prompt('Classic tier:');
+    if (!classic) return;
+    const skywars = prompt('Skywars tier:');
+    if (!skywars) return;
+    const boxing = prompt('Boxing tier:');
+    if (!boxing) return;
+    
+    try {
+        const res = await fetch(`/api/admin/update-user-tiers/${userId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sumo, bedfight, classic, skywars, boxing })
+        });
+        if (res.ok) {
+            alert('Tiers updated!');
+            loadAllUsers();
+        }
+    } catch (error) {
+        alert('Error updating tiers');
+    }
+}
+
+async function banUser(userId, username) {
+    if (!confirm(`Ban ${username}? This cannot be undone.`)) return;
+    
+    try {
+        const res = await fetch(`/api/ban-user/${userId}`, { method: 'POST' });
+        if (res.ok) {
+            alert('User banned!');
+            loadAllUsers();
+        }
+    } catch (error) {
+        alert('Error banning user');
+    }
+}
+
+// Load on page load
+loadAllUsers();
+
