@@ -11,478 +11,273 @@ const auth = require('./auth');
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"]
-  }
+    cors: { origin: '*', methods: ['GET', 'POST'] }
 });
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '../frontend')));
 app.use(session({
-  secret: 'minecraft-tier-testing-secret-key-2024',
-  resave: false,
-  saveUninitialized: false,
-  cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 }
+    secret: 'minecraft-tier-testing-secret-key-2024',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 }
 }));
 
-// File upload configuration
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadDir = path.join(__dirname, '../frontend/uploads');
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + '-' + file.originalname);
-  }
+    destination: function(req, file, cb) {
+        const uploadDir = path.join(__dirname, '../frontend/uploads');
+        cb(null, uploadDir);
+    },
+    filename: function(req, file, cb) {
+        cb(null, Date.now() + '-' + file.originalname);
+    }
 });
 const upload = multer({ storage: storage });
 
-// Initialize database
 const db = new Database();
-
-// Ensure uploads directory exists
 const fs = require('fs');
 const uploadDir = path.join(__dirname, '../frontend/uploads');
 if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+    fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// Socket.io for real-time chat
-const activeTests = new Map();
-
 io.on('connection', (socket) => {
-  console.log('New client connected');
-  
-  socket.on('join-test', (testId) => {
-    socket.join('test-' + testId);
-    activeTests.set(socket.id, testId);
-    console.log('Client joined test-' + testId);
-  });
-  
-  socket.on('chat-message', (data) => {
-    io.to('test-' + data.testId).emit('chat-message', {
-      user: data.user,
-      message: data.message,
-      timestamp: new Date()
+    console.log('New client connected');
+    socket.on('join-test', (testId) => {
+        socket.join('test-' + testId);
     });
-  });
-  
-  socket.on('disconnect', () => {
-    activeTests.delete(socket.id);
-    console.log('Client disconnected');
-  });
+    socket.on('chat-message', (data) => {
+        io.to('test-' + data.testId).emit('chat-message', {
+            user: data.user,
+            message: data.message,
+            timestamp: new Date()
+        });
+    });
+    socket.on('disconnect', () => {
+        console.log('Client disconnected');
+    });
 });
 
-// API Routes
-
-// User authentication
+// Auth routes
 app.post('/api/register', async (req, res) => {
-  try {
-    const { username, password, ign, timezone, preferredServer } = req.body;
-    const hashedPassword = await auth.hashPassword(password);
-    
-    const user = await db.createUser(username, hashedPassword, ign, timezone, preferredServer);
-    res.json({ success: true, user: { id: user.id, username: user.username } });
-  } catch (error) {
-    console.error('Register error:', error);
-    res.status(400).json({ success: false, error: error.message });
-  }
+    try {
+        const { username, password, ign, timezone, preferredServer } = req.body;
+        const hashedPassword = await auth.hashPassword(password);
+        const user = await db.createUser(username, hashedPassword, ign, timezone, preferredServer);
+        res.json({ success: true, user: { id: user.id, username: user.username } });
+    } catch (error) {
+        res.status(400).json({ success: false, error: error.message });
+    }
 });
 
 app.post('/api/login', async (req, res) => {
-  try {
-    const { username, password } = req.body;
-    const user = await db.getUserByUsername(username);
-    
-    if (user && await auth.verifyPassword(password, user.password)) {
-      req.session.userId = user.id;
-      req.session.username = user.username;
-      req.session.isAdmin = user.is_admin === 1;
-      
-      res.json({ 
-        success: true, 
-        user: {
-          id: user.id,
-          username: user.username,
-          isAdmin: user.is_admin === 1
+    try {
+        const { username, password } = req.body;
+        console.log('Login attempt for username:', username);
+        
+        const user = await db.getUserByUsername(username);
+        
+        if (!user) {
+            console.log('User not found:', username);
+            return res.status(401).json({ success: false, error: 'Invalid credentials' });
         }
-      });
-    } else {
-      res.status(401).json({ success: false, error: 'Invalid credentials' });
+        
+        const isValid = await auth.verifyPassword(password, user.password);
+        console.log('Password valid:', isValid);
+        
+        if (isValid) {
+            req.session.userId = user.id;
+            req.session.username = user.username;
+            req.session.isAdmin = user.is_admin === 1;
+            
+            res.json({ 
+                success: true, 
+                user: {
+                    id: user.id,
+                    username: user.username,
+                    isAdmin: user.is_admin === 1
+                }
+            });
+        } else {
+            res.status(401).json({ success: false, error: 'Invalid credentials' });
+        }
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(400).json({ success: false, error: error.message });
     }
-  } catch (error) {
-    console.error('Login error:', error);
-    res.status(400).json({ success: false, error: error.message });
-  }
 });
 
 app.post('/api/logout', (req, res) => {
-  req.session.destroy();
-  res.json({ success: true });
+    req.session.destroy();
+    res.json({ success: true });
 });
 
 app.get('/api/check-auth', (req, res) => {
-  if (req.session.userId) {
-    res.json({ 
-      authenticated: true, 
-      username: req.session.username,
-      isAdmin: req.session.isAdmin
-    });
-  } else {
-    res.json({ authenticated: false });
-  }
-});
-
-// Profile management
-app.get('/api/profile/:username', async (req, res) => {
-  try {
-    const profile = await db.getUserProfile(req.params.username);
-    if (!profile) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-    res.json(profile);
-  } catch (error) {
-    console.error('Profile error:', error);
-    res.status(400).json({ error: error.message });
-  }
-});
-
-app.post('/api/update-profile', upload.single('profilePicture'), async (req, res) => {
-  try {
-    if (!req.session.userId) {
-      return res.status(401).json({ error: 'Not authenticated' });
-    }
-    
-    const { ign, timezone, preferredServer } = req.body;
-    let profilePicture = null;
-    
-    if (req.file) {
-      profilePicture = '/uploads/' + req.file.filename;
-    }
-    
-    await db.updateProfile(req.session.userId, ign, timezone, preferredServer, profilePicture);
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Update profile error:', error);
-    res.status(400).json({ error: error.message });
-  }
-});
-
-app.post('/api/change-password', async (req, res) => {
-  try {
-    if (!req.session.userId) {
-      return res.status(401).json({ error: 'Not authenticated' });
-    }
-    
-    const { currentPassword, newPassword } = req.body;
-    const user = await db.getUserById(req.session.userId);
-    
-    if (await auth.verifyPassword(currentPassword, user.password)) {
-      const hashedPassword = await auth.hashPassword(newPassword);
-      await db.changePassword(req.session.userId, hashedPassword);
-      res.json({ success: true });
+    if (req.session.userId) {
+        res.json({ 
+            authenticated: true, 
+            username: req.session.username,
+            isAdmin: req.session.isAdmin
+        });
     } else {
-      res.status(401).json({ error: 'Current password is incorrect' });
+        res.json({ authenticated: false });
     }
-  } catch (error) {
-    console.error('Change password error:', error);
-    res.status(400).json({ error: error.message });
-  }
 });
 
-// Leaderboard
 app.get('/api/leaderboard', async (req, res) => {
-  try {
-    const leaderboard = await db.getLeaderboard();
-    res.json(leaderboard);
-  } catch (error) {
-    console.error('Leaderboard error:', error);
-    res.status(400).json({ error: error.message });
-  }
+    try {
+        const leaderboard = await db.getLeaderboard();
+        res.json(leaderboard);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
 });
 
-// Queue system
 app.post('/api/join-queue', async (req, res) => {
-  try {
-    if (!req.session.userId) {
-      return res.status(401).json({ error: 'Not authenticated' });
+    try {
+        if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+        const { ign, timezone, preferredServer, username } = req.body;
+        const queueEntry = await db.addToQueue(req.session.userId, ign, timezone, preferredServer, username);
+        res.json({ success: true, queueId: queueEntry.id });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
     }
-    
-    const { ign, timezone, preferredServer, username } = req.body;
-    const queueEntry = await db.addToQueue(req.session.userId, ign, timezone, preferredServer, username);
-    res.json({ success: true, queueId: queueEntry.id });
-  } catch (error) {
-    console.error('Join queue error:', error);
-    res.status(400).json({ error: error.message });
-  }
 });
 
 app.get('/api/queue', async (req, res) => {
-  try {
-    const queue = await db.getQueue();
-    res.json(queue);
-  } catch (error) {
-    console.error('Get queue error:', error);
-    res.status(400).json({ error: error.message });
-  }
-});
-
-app.post('/api/accept-test/:queueId', async (req, res) => {
-  try {
-    if (!req.session.userId) {
-      return res.status(401).json({ error: 'Not authenticated' });
+    try {
+        const queue = await db.getQueue();
+        res.json(queue);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
     }
-    
-    const user = await db.getUserById(req.session.userId);
-    const isTester = await db.isTester(req.session.userId);
-    
-    if (!isTester && !user.is_admin) {
-      return res.status(403).json({ error: 'Not authorized to test' });
+});
+
+app.get('/api/profile/:username', async (req, res) => {
+    try {
+        const profile = await db.getUserProfile(req.params.username);
+        if (!profile) return res.status(404).json({ error: 'User not found' });
+        res.json(profile);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
     }
-    
-    const test = await db.acceptTest(req.params.queueId, req.session.userId);
-    res.json({ success: true, testId: test.id });
-  } catch (error) {
-    console.error('Accept test error:', error);
-    res.status(400).json({ error: error.message });
-  }
 });
 
-app.post('/api/submit-test', async (req, res) => {
-  try {
-    if (!req.session.userId) {
-      return res.status(401).json({ error: 'Not authenticated' });
+app.post('/api/update-profile', upload.single('profilePicture'), async (req, res) => {
+    try {
+        if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+        const { ign, timezone, preferredServer } = req.body;
+        let profilePicture = null;
+        if (req.file) profilePicture = '/uploads/' + req.file.filename;
+        await db.updateProfile(req.session.userId, ign, timezone, preferredServer, profilePicture);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
     }
-    
-    const { testId, testerScore, testeeScore, testerName, testeeName, testeeIgn, server } = req.body;
-    await db.submitTestResult(testId, testerScore, testeeScore, testerName, testeeName, testeeIgn, server);
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Submit test error:', error);
-    res.status(400).json({ error: error.message });
-  }
 });
 
-// Admin routes
-app.post('/api/admin/add-tester', async (req, res) => {
-  try {
-    if (!req.session.userId || !req.session.isAdmin) {
-      return res.status(403).json({ error: 'Not authorized' });
+app.post('/api/change-password', async (req, res) => {
+    try {
+        if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+        const { currentPassword, newPassword } = req.body;
+        const user = await db.getUserById(req.session.userId);
+        if (await auth.verifyPassword(currentPassword, user.password)) {
+            const hashedPassword = await auth.hashPassword(newPassword);
+            await db.changePassword(req.session.userId, hashedPassword);
+            res.json({ success: true });
+        } else {
+            res.status(401).json({ error: 'Current password is incorrect' });
+        }
+    } catch (error) {
+        res.status(400).json({ error: error.message });
     }
-    
-    const { userId } = req.body;
-    await db.makeTester(userId);
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Add tester error:', error);
-    res.status(400).json({ error: error.message });
-  }
 });
 
-app.get('/api/admin/tickets', async (req, res) => {
-  try {
-    if (!req.session.userId || !req.session.isAdmin) {
-      return res.status(403).json({ error: 'Not authorized' });
+// Debug route - check what users exist
+app.get('/api/debug-users', async (req, res) => {
+    try {
+        const users = await db.getAllUsers();
+        res.json({ 
+            users: users.map(u => ({ 
+                username: u.username, 
+                is_admin: u.is_admin,
+                has_password: !!u.password 
+            }))
+        });
+    } catch (error) {
+        res.json({ error: error.message });
     }
-    
-    const tickets = await db.getTickets();
-    res.json(tickets);
-  } catch (error) {
-    console.error('Get tickets error:', error);
-    res.status(400).json({ error: error.message });
-  }
 });
 
-// Forum routes
-app.get('/api/forum/posts', async (req, res) => {
-  try {
-    const posts = await db.getForumPosts();
-    res.json(posts);
-  } catch (error) {
-    console.error('Get forum posts error:', error);
-    res.status(400).json({ error: error.message });
-  }
-});
-
-app.post('/api/forum/post', async (req, res) => {
-  try {
-    if (!req.session.userId) {
-      return res.status(401).json({ error: 'Not authenticated' });
-    }
-    
-    const { title, content } = req.body;
-    const post = await db.createForumPost(req.session.userId, title, content);
-    res.json({ success: true, postId: post.id });
-  } catch (error) {
-    console.error('Create forum post error:', error);
-    res.status(400).json({ error: error.message });
-  }
-});
-
-app.post('/api/forum/comment', async (req, res) => {
-  try {
-    if (!req.session.userId) {
-      return res.status(401).json({ error: 'Not authenticated' });
-    }
-    
-    const { postId, content } = req.body;
-    await db.createForumComment(req.session.userId, postId, content);
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Create forum comment error:', error);
-    res.status(400).json({ error: error.message });
-  }
-});
-
-// Start server
 const PORT = process.env.PORT || 3000;
 
-// Initialize database and start server
-db.init().then(() => {
-  console.log('Database initialized successfully');
-  server.listen(PORT, function() {
-    console.log('===================================');
-    console.log('Minecraft Tier Testing Server');
-    console.log('===================================');
-    console.log('Server running on port: ' + PORT);
-    console.log('Visit: http://localhost:' + PORT);
-    console.log('===================================');
-  });
-}).catch(function(err) {
-  console.error('Failed to initialize database:', err);
-  process.exit(1);
-});
-// Import AdminManagement
-const AdminManagement = require('./admin-management');
-const adminManager = new AdminManagement(db);
-
-// Admin Routes
-
-// Get all users (admin only)
-app.get('/api/admin/users', async (req, res) => {
+async function initialize() {
     try {
-        if (!req.session.userId || !req.session.isAdmin) {
-            return res.status(403).json({ error: 'Not authorized' });
+        await db.init();
+        console.log('Database initialized');
+        
+        // Check existing users
+        const existingUsers = await db.getAllUsers();
+        console.log('Existing users:', existingUsers.map(u => u.username));
+        
+        // Create or reset admin user
+        let adminUser = await db.getUserByUsername('admin');
+        if (adminUser) {
+            const newHash = await auth.hashPassword('123123');
+            await db.changePassword(adminUser.id, newHash);
+            console.log('Admin password reset: admin / 123123');
+        } else {
+            const hashedPassword = await auth.hashPassword('123123');
+            adminUser = await db.createUser('admin', hashedPassword, 'Admin', 'UTC', 'US', true);
+            console.log('Admin created: admin / 123123');
         }
         
-        const users = await adminManager.getAllUsers(req.session.userId);
-        res.json(users);
-    } catch (error) {
-        console.error('Get users error:', error);
-        res.status(400).json({ error: error.message });
-    }
-});
-
-// Reset user password (admin only)
-app.post('/api/admin/reset-password', async (req, res) => {
-    try {
-        if (!req.session.userId || !req.session.isAdmin) {
-            return res.status(403).json({ error: 'Not authorized' });
+        // Create lining user
+        let liningUser = await db.getUserByUsername('lining');
+        if (liningUser) {
+            const newHash = await auth.hashPassword('lining123');
+            await db.changePassword(liningUser.id, newHash);
+            console.log('Lining password reset: lining / lining123');
+        } else {
+            const hashedPassword = await auth.hashPassword('lining123');
+            liningUser = await db.createUser('lining', hashedPassword, 'lining123', 'UTC', 'US');
+            await db.updateUserTiers(liningUser.id, 'LT2', 'HT2', 'HT3', 'LT3', 'LT3');
+            await db.makeTester(liningUser.id);
+            console.log('Lining created: lining / lining123');
         }
         
-        const { username, newPassword } = req.body;
-        const result = await adminManager.resetUserPassword(username, newPassword, req.session.userId);
-        res.json(result);
-    } catch (error) {
-        console.error('Reset password error:', error);
-        res.status(400).json({ error: error.message });
-    }
-});
-
-// Delete user account (admin only)
-app.post('/api/admin/delete-user', async (req, res) => {
-    try {
-        if (!req.session.userId || !req.session.isAdmin) {
-            return res.status(403).json({ error: 'Not authorized' });
+        // Create SKIBIDIBOSS user
+        let skibiUser = await db.getUserByUsername('SKIBIDIBOSS');
+        if (skibiUser) {
+            const newHash = await auth.hashPassword('skibidiboss123');
+            await db.changePassword(skibiUser.id, newHash);
+            console.log('SKIBIDIBOSS password reset');
+        } else {
+            const hashedPassword = await auth.hashPassword('skibidiboss123');
+            skibiUser = await db.createUser('SKIBIDIBOSS', hashedPassword, 'SKIBIDIBOSS', 'UTC', 'US');
+            await db.updateUserTiers(skibiUser.id, 'LT3', 'LT3', 'LT3', 'LT3', 'LT3');
+            await db.makeTester(skibiUser.id);
+            console.log('SKIBIDIBOSS created: SKIBIDIBOSS / skibidiboss123');
         }
         
-        const { username } = req.body;
-        const result = await adminManager.deleteUserAccount(username, req.session.userId);
-        res.json(result);
+        server.listen(PORT, () => {
+            console.log('===================================');
+            console.log('SERVER STARTED SUCCESSFULLY!');
+            console.log('===================================');
+            console.log('Port: ' + PORT);
+            console.log('===================================');
+            console.log('LOGIN CREDENTIALS:');
+            console.log('  Admin:      admin / 123123');
+            console.log('  Lining:     lining / lining123');
+            console.log('  SKIBIDIBOSS: SKIBIDIBOSS / skibidiboss123');
+            console.log('===================================');
+        });
     } catch (error) {
-        console.error('Delete user error:', error);
-        res.status(400).json({ error: error.message });
+        console.error('Initialization error:', error);
+        process.exit(1);
     }
-});
+}
 
-// Update user tiers (admin only)
-app.post('/api/admin/update-tiers', async (req, res) => {
-    try {
-        if (!req.session.userId || !req.session.isAdmin) {
-            return res.status(403).json({ error: 'Not authorized' });
-        }
-        
-        const { username, tiers } = req.body;
-        const result = await adminManager.updateUserTiers(username, tiers, req.session.userId);
-        res.json(result);
-    } catch (error) {
-        console.error('Update tiers error:', error);
-        res.status(400).json({ error: error.message });
-    }
-});
-
-// Remove from queue (admin only)
-app.post('/api/admin/remove-from-queue', async (req, res) => {
-    try {
-        if (!req.session.userId || !req.session.isAdmin) {
-            return res.status(403).json({ error: 'Not authorized' });
-        }
-        
-        const { queueId } = req.body;
-        const result = await adminManager.removeFromQueue(queueId, req.session.userId);
-        res.json(result);
-    } catch (error) {
-        console.error('Remove from queue error:', error);
-        res.status(400).json({ error: error.message });
-    }
-});
-
-// Clear entire queue (admin only)
-app.post('/api/admin/clear-queue', async (req, res) => {
-    try {
-        if (!req.session.userId || !req.session.isAdmin) {
-            return res.status(403).json({ error: 'Not authorized' });
-        }
-        
-        const result = await adminManager.clearAllQueue(req.session.userId);
-        res.json(result);
-    } catch (error) {
-        console.error('Clear queue error:', error);
-        res.status(400).json({ error: error.message });
-    }
-});
-
-// Get user details for editing (admin only)
-app.get('/api/admin/user-details/:username', async (req, res) => {
-    try {
-        if (!req.session.userId || !req.session.isAdmin) {
-            return res.status(403).json({ error: 'Not authorized' });
-        }
-        
-        const userDetails = await adminManager.getUserDetails(req.params.username, req.session.userId);
-        res.json(userDetails);
-    } catch (error) {
-        console.error('Get user details error:', error);
-        res.status(400).json({ error: error.message });
-    }
-});
-
-// Bulk update tiers (admin only)
-app.post('/api/admin/bulk-update-tiers', async (req, res) => {
-    try {
-        if (!req.session.userId || !req.session.isAdmin) {
-            return res.status(403).json({ error: 'Not authorized' });
-        }
-        
-        const { updates } = req.body;
-        const result = await adminManager.bulkUpdateTiers(updates, req.session.userId);
-        res.json(result);
-    } catch (error) {
-        console.error('Bulk update error:', error);
-        res.status(400).json({ error: error.message });
-    }
-});
+initialize();
