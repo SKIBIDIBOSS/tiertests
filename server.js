@@ -1,63 +1,97 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const path = require('path'); // Required to find folders
+const path = require('path');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// --- THE FIX FOR THE WHITE SCREEN ---
-// 1. Tell Express where the "views" folder is
+// --- 1. SETTINGS & PATHS ---
+// This tells the app where to find your "views" folder
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
 
-// 2. Tell Express where the "public" (CSS/Images) folder is
+// This tells the app where to find images/css if you use them later
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// --- DATABASE CONNECTION ---
+// --- 2. DATABASE CONNECTION ---
 const MONGO_URI = process.env.MONGODB_URI;
 
 mongoose.connect(MONGO_URI)
     .then(() => {
         console.log("✅ DATABASE CONNECTED");
-        app.listen(PORT, () => console.log(`🚀 SITE LIVE ON PORT ${PORT}`));
+        app.listen(PORT, () => console.log(`🚀 LIVE AT: http://localhost:${PORT}`));
     })
-    .catch(err => console.error("❌ DB ERROR:", err.message));
+    .catch(err => {
+        console.error("❌ CONNECTION ERROR:", err.message);
+    });
 
-// --- DATA MODEL ---
-const User = mongoose.model('User', new mongoose.Schema({
+// --- 3. DATABASE SCHEMA (The "User" Blueprint) ---
+const userSchema = new mongoose.Schema({
     username: String,
-    role: { type: String, default: 'user' },
-    tier: { type: String, default: 'Unranked' },
+    role: { type: String, default: 'user' },    // Options: admin, tester, user
+    tier: { type: String, default: 'Unranked' }, // Options: HT1, LT1, etc.
     isBanned: { type: Boolean, default: false }
-}));
+});
 
-// --- ROUTES ---
+const User = mongoose.model('User', userSchema);
+
+// --- 4. ROUTES (The Pages) ---
+
+// MAIN LEADERBOARD PAGE
 app.get('/', async (req, res) => {
     try {
-        // This looks for "views/index.ejs"
+        // Fetch all users who are NOT banned, sorted by tier
         const users = await User.find({ isBanned: false }).sort({ tier: 1 });
-        res.render('index', { users }); 
+        
+        // Send the data to your index.ejs
+        res.render('index', { users: users });
     } catch (err) {
-        res.status(500).send("Check logs: Database issue or missing index.ejs");
+        console.log("Error fetching users:", err);
+        // If the database fails, send an empty list so the site still loads
+        res.render('index', { users: [] });
     }
 });
 
+// ADMIN PANEL PAGE
 app.get('/admin', async (req, res) => {
     try {
         const users = await User.find();
-        res.render('admin', { users });
+        res.render('admin', { users: users });
     } catch (err) {
-        res.send("Error loading admin panel.");
+        res.send("Error loading admin panel. Make sure admin.ejs exists in /views");
     }
 });
 
+// ADMIN ACTIONS (Ban, Update Tier, etc.)
 app.post('/admin/action', async (req, res) => {
-    const { userId, action, tier } = req.body;
-    if (action === 'ban') await User.findByIdAndUpdate(userId, { isBanned: true });
-    if (action === 'updateTier') await User.findByIdAndUpdate(userId, { tier: tier });
-    res.redirect('/admin');
+    const { userId, action, tier, username, role } = req.body;
+
+    try {
+        if (action === 'create') {
+            await User.create({ username, role, tier });
+        } else if (action === 'ban') {
+            await User.findByIdAndUpdate(userId, { isBanned: true });
+        } else if (action === 'updateTier') {
+            await User.findByIdAndUpdate(userId, { tier: tier });
+        } else if (action === 'delete') {
+            await User.findByIdAndDelete(userId);
+        }
+        res.redirect('/admin');
+    } catch (err) {
+        res.status(500).send("Admin action failed.");
+    }
+});
+
+// PROFILE / TICKET PAGE
+app.get('/ticket/:id', async (req, res) => {
+    try {
+        const player = await User.findById(req.params.id);
+        res.render('ticket', { player });
+    } catch (err) {
+        res.redirect('/');
+    }
 });
