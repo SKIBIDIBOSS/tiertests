@@ -65,6 +65,16 @@ class Database {
                     FOREIGN KEY (testee_id) REFERENCES users(id)
                 )`);
 
+                this.db.run(`CREATE TABLE IF NOT EXISTS test_messages (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    test_id INTEGER NOT NULL,
+                    user_id INTEGER NOT NULL,
+                    message TEXT NOT NULL,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (test_id) REFERENCES tests(id),
+                    FOREIGN KEY (user_id) REFERENCES users(id)
+                )`);
+
                 this.db.run(`CREATE TABLE IF NOT EXISTS forum_posts (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     user_id INTEGER NOT NULL,
@@ -248,12 +258,15 @@ class Database {
     acceptTest(queueId, testerId) {
         return new Promise((resolve, reject) => {
             this.db.get('SELECT * FROM queue WHERE id = ? AND status = "pending"', [queueId], (err, queue) => {
-                if (err) reject(err);
-                else if (!queue) reject(new Error('Queue entry not found'));
-                else {
+                if (err) {
+                    reject(err);
+                } else if (!queue) {
+                    reject(new Error('Queue entry not found'));
+                } else {
                     this.db.run('UPDATE queue SET status = "processing" WHERE id = ?', [queueId], (err2) => {
-                        if (err2) reject(err2);
-                        else {
+                        if (err2) {
+                            reject(err2);
+                        } else {
                             this.db.run('INSERT INTO tests (queue_id, tester_id, testee_id) VALUES (?, ?, ?)',
                                 [queueId, testerId, queue.user_id], function(err3) {
                                     if (err3) reject(err3);
@@ -273,6 +286,51 @@ class Database {
                     if (err) reject(err);
                     else resolve();
                 });
+        });
+    }
+
+    getTestDetails(testId) {
+        return new Promise((resolve, reject) => {
+            this.db.get(`
+                SELECT t.*, 
+                       u1.username as tester_username,
+                       u2.username as testee_username
+                FROM tests t
+                LEFT JOIN users u1 ON t.tester_id = u1.id
+                LEFT JOIN users u2 ON t.testee_id = u2.id
+                WHERE t.id = ?
+            `, [testId], (err, row) => {
+                if (err) reject(err);
+                else resolve(row);
+            });
+        });
+    }
+
+    saveTestMessage(testId, userId, message) {
+        return new Promise((resolve, reject) => {
+            this.db.run(
+                'INSERT INTO test_messages (test_id, user_id, message, timestamp) VALUES (?, ?, ?, ?)',
+                [testId, userId, message, new Date().toISOString()],
+                (err) => {
+                    if (err) reject(err);
+                    else resolve();
+                }
+            );
+        });
+    }
+
+    getTestMessages(testId) {
+        return new Promise((resolve, reject) => {
+            this.db.all(`
+                SELECT tm.*, u.username 
+                FROM test_messages tm
+                JOIN users u ON tm.user_id = u.id
+                WHERE tm.test_id = ?
+                ORDER BY tm.timestamp ASC
+            `, [testId], (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows);
+            });
         });
     }
 
@@ -413,50 +471,3 @@ class Database {
 }
 
 module.exports = Database;
-// Get test details
-getTestDetails(testId) {
-    return new Promise((resolve, reject) => {
-        this.db.get(`
-            SELECT t.*, 
-                   u1.username as tester_username,
-                   u2.username as testee_username
-            FROM tests t
-            LEFT JOIN users u1 ON t.tester_id = u1.id
-            LEFT JOIN users u2 ON t.testee_id = u2.id
-            WHERE t.id = ?
-        `, [testId], (err, row) => {
-            if (err) reject(err);
-            else resolve(row);
-        });
-    });
-}
-
-// Save test message
-saveTestMessage(testId, userId, message) {
-    return new Promise((resolve, reject) => {
-        this.db.run(
-            'INSERT INTO test_messages (test_id, user_id, message, timestamp) VALUES (?, ?, ?, ?)',
-            [testId, userId, message, new Date().toISOString()],
-            (err) => {
-                if (err) reject(err);
-                else resolve();
-            }
-        );
-    });
-}
-
-// Get test messages
-getTestMessages(testId) {
-    return new Promise((resolve, reject) => {
-        this.db.all(`
-            SELECT tm.*, u.username 
-            FROM test_messages tm
-            JOIN users u ON tm.user_id = u.id
-            WHERE tm.test_id = ?
-            ORDER BY tm.timestamp ASC
-        `, [testId], (err, rows) => {
-            if (err) reject(err);
-            else resolve(rows);
-        });
-    });
-}
