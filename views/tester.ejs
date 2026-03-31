@@ -2,20 +2,20 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>TESTER PANEL | SKIBIDIBOSS</title>
+    <title>TESTER | SKIBIDIBOSS</title>
     <style>
         body { background: #0b0c0e; color: #fff; font-family: sans-serif; padding: 40px; }
-        .card { background: #18191c; padding: 20px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-        select, button { padding: 10px; border-radius: 5px; border: none; }
-        button { background: #00d1ff; font-weight: bold; cursor: pointer; }
+        .row { background: #18191c; padding: 20px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #00d1ff; }
+        select, button { padding: 10px; border-radius: 5px; border: none; background: #000; color: #fff; }
+        button { background: #00d1ff; color: #000; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
-    <h1 style="color: #00d1ff;">Tester Rank Terminal</h1>
-    <p>Update player tiers after lining tests.</p>
+    <h1 style="color: #00d1ff;">Tester Terminal</h1>
+    <p>Update ranking data after assessment.</p>
     <% users.forEach(user => { %>
-        <div class="card">
-            <span><strong><%= user.username %></strong> (Current: <%= user.tier %>)</span>
+        <div class="row">
+            <span><strong><%= user.username %></strong> (<%= user.tier %>)</span>
             <form action="/tester/update" method="POST">
                 <input type="hidden" name="userId" value="<%= user._id %>">
                 <select name="newTier">
@@ -23,13 +23,12 @@
                     <option value="LT1">LT1</option>
                     <option value="HT2">HT2</option>
                     <option value="LT2">LT2</option>
-                    <option value="HT3">HT3</option>
                     <option value="Unranked">Unranked</option>
                 </select>
-                <button type="submit">UPDATE TIER</button>
+                <button type="submit">SET TIER</button>
             </form>
         </div>
     <% }) %>
-    <br><a href="/" style="color: #8e9297;">Return to Hub</a>
+    <br><a href="/" style="color: #555;">Return to Hub</a>
 </body>
 </html>
