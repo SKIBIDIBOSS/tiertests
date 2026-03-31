@@ -3,51 +3,187 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/css/style.css">
-    <title>Tier Leaderboard</title>
+    <title>TIER LIST | OFFICIAL RANKINGS</title>
+    <style>
+        :root {
+            --primary: #5865f2;
+            --glow: #7289da;
+            --bg: #0f1012;
+            --card-bg: #18191c;
+            --text: #ffffff;
+            --subtext: #b9bbbe;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            padding: 60px 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        h1 {
+            font-size: 3rem;
+            margin: 0;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            background: linear-gradient(to right, #fff, var(--glow));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 10px rgba(114, 137, 218, 0.5));
+        }
+
+        .slogan {
+            color: var(--subtext);
+            font-size: 1.1rem;
+            margin-top: 10px;
+            letter-spacing: 2px;
+        }
+
+        .leaderboard-container {
+            background: var(--card-bg);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 12px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            overflow: hidden;
+        }
+
+        .table-header {
+            background: rgba(0,0,0,0.2);
+            padding: 20px 30px;
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            font-weight: bold;
+            color: var(--glow);
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .user-row {
+            padding: 20px 30px;
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            transition: all 0.3s ease;
+        }
+
+        .user-row:hover {
+            background: rgba(88, 101, 242, 0.05);
+            transform: scale(1.01);
+        }
+
+        .username {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        /* Professional Glow Tiers */
+        .tier-badge {
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.8rem;
+            background: #2f3136;
+            border: 1px solid var(--glow);
+            box-shadow: 0 0 10px rgba(114, 137, 218, 0.2);
+            text-align: center;
+            display: inline-block;
+        }
+
+        .btn-action {
+            background: var(--primary);
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-align: center;
+            transition: 0.2s;
+            box-shadow: 0 4px 15px rgba(88, 101, 242, 0.3);
+        }
+
+        .btn-action:hover {
+            background: #4752c4;
+            box-shadow: 0 0 20px rgba(88, 101, 242, 0.6);
+        }
+
+        .no-data {
+            padding: 50px;
+            text-align: center;
+            color: var(--subtext);
+        }
+
+        .staff-footer {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .staff-link {
+            color: var(--subtext);
+            text-decoration: none;
+            font-size: 0.9rem;
+            opacity: 0.5;
+        }
+
+        .staff-link:hover { opacity: 1; color: var(--glow); }
+
+        /* Role Colors */
+        .admin { color: #ff4757; text-shadow: 0 0 10px rgba(255, 71, 87, 0.3); }
+        .tester { color: #1e90ff; }
+        .user { color: #ffffff; }
+
+    </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>Tier Leaderboard</h1>
-            <p>Official Player Rankings</p>
+            <h1>Tier Rankings</h1>
+            <div class="slogan">THE ULTIMATE COMPETITIVE LEADERBOARD</div>
         </header>
 
-        <div class="leaderboard-card">
-            <div class="list-header">
-                <span>Player</span>
-                <span>Tier</span>
-                <span>Action</span>
+        <div class="leaderboard-container">
+            <div class="table-header">
+                <span>Player Identity</span>
+                <span>Ranking</span>
+                <span>Status</span>
             </div>
 
             <div class="user-list">
-                <% if (users.length > 0) { %>
+                <% if (typeof users !== 'undefined' && users.length > 0) { %>
                     <% users.forEach(user => { %>
                         <div class="user-row">
-                            <div class="user-info">
-                                <span class="username role-<%= user.role.toLowerCase() %>">
-                                    <%= user.username %>
-                                </span>
-                            </div>
-                            
-                            <div class="user-tier">
-                                <span class="tier-badge"><%= user.tier %></span>
-                            </div>
-
-                            <div class="user-action">
-                                <a href="/ticket/<%= user._id %>" class="btn-ticket">Open Ticket</a>
-                            </div>
+                            <span class="username <%= user.role %>"><%= user.username %></span>
+                            <div><span class="tier-badge"><%= user.tier %></span></div>
+                            <a href="/ticket/<%= user._id %>" class="btn-action">VIEW PROFILE</a>
                         </div>
                     <% }) %>
                 <% } else { %>
-                    <div class="no-data">No players ranked yet.</div>
+                    <div class="no-data">
+                        <p>No operatives ranked. Database sync required.</p>
+                    </div>
                 <% } %>
             </div>
         </div>
 
-        <footer>
-            <a href="/admin" class="admin-link">Staff Login</a>
-        </header>
+        <div class="staff-footer">
+            <a href="/admin" class="staff-link">STAFF ACCESS ONLY</a>
+        </div>
     </div>
 </body>
 </html>
