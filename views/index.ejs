@@ -3,35 +3,65 @@
 <head>
     <title>SKIBIDIBOSS X LINING</title>
     <style>
-        body { background: #0b0c0e; color: white; font-family: sans-serif; margin: 0; display: flex; }
-        .sidebar { width: 250px; background: #121417; height: 100vh; padding: 20px; border-right: 1px solid #222; }
-        .content { flex: 1; padding: 50px; }
-        .tier-card { background: #1c1e22; padding: 20px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; }
-        .btn-test { background: #00d1ff; color: black; padding: 15px; border-radius: 8px; text-decoration: none; font-weight: bold; }
+        :root { --bg: #0b0c0e; --side: #121417; --accent: #00d1ff; }
+        body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; display: flex; margin: 0; height: 100vh; }
+        .sidebar { width: 260px; background: var(--side); padding: 20px; border-right: 1px solid #222; }
+        .main { flex: 1; padding: 40px; overflow-y: auto; }
+        .forum { width: 300px; background: var(--side); border-left: 1px solid #222; display: flex; flex-direction: column; }
+        .player-row { background: #1c1e22; padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
+        .icon { width: 24px; margin-left: 5px; vertical-align: middle; }
+        .btn-test { background: var(--accent); color: black; padding: 12px; border-radius: 5px; text-decoration: none; font-weight: bold; display: block; text-align: center; }
     </style>
 </head>
 <body>
     <div class="sidebar">
         <h2>SKIBIDIBOSS X</h2>
-        <a href="/" style="color:white; display:block; margin: 10px 0;">Leaderboard</a>
-        <a href="/queue" style="color:white; display:block; margin: 10px 0;">Join Queue</a>
-        <% if (user && user.role === 'admin') { %>
-            <a href="/admin" style="color:red; display:block; margin: 10px 0;">Admin Panel</a>
+        <a href="/" style="color:white; text-decoration:none;">Leaderboard</a><br><br>
+        <% if (user) { %>
+            <p>Logged as: <%= user.username %></p>
+            <a href="/logout" style="color:#555;">Logout</a>
+        <% } else { %>
+            <a href="/login" class="btn-test">Staff Login</a>
         <% } %>
     </div>
-    <div class="content">
+
+    <div class="main">
         <h1>Leaderboard</h1>
-        <div class="leaderboard">
-            <% players.forEach(player => { %>
-                <div class="tier-card">
-                    <span><img src="<%= player.pfp %>" width="30"> <b><%= player.username %></b> (<%= player.ign %>)</span>
-                    <span>Sumo: <%= player.ranks.sumo %> | Bedfight: <%= player.ranks.bedfight %></span>
-                </div>
+        <div class="player-row" style="border: 1px solid gold;">
+            <span>1. <b>lining</b> (lining123) ⚔️🛡️🏹</span>
+            <span>Sumo: LT2 | Bedfight: HT2 | Classic: HT3</span>
+        </div>
+        <% players.forEach((p, i) => { %>
+            <div class="player-row">
+                <span><%= i+2 %>. <img src="<%= p.pfp %>" width="20"> <b><%= p.username %></b></span>
+                <span>S: <%= p.ranks.sumo %> | B: <%= p.ranks.bedfight %></span>
+            </div>
+        <% }) %>
+        <br>
+        <div style="background:#1c1e22; padding: 20px; border-radius: 10px; text-align: center;">
+            <h3>Want to join? Get tested now</h3>
+            <button onclick="document.getElementById('qModal').style.display='block'" class="btn-test">JOIN QUEUE</button>
+        </div>
+    </div>
+
+    <div class="forum">
+        <div style="padding:15px; border-bottom:1px solid #222;">Public Forum</div>
+        <div style="flex:1; padding:10px; font-size: 0.8rem;">
+            <% chat.forEach(m => { %>
+                <div><b><%= m.username %>:</b> <%= m.text %></div>
             <% }) %>
         </div>
-        <br><br>
-        <h3>Want to join? Get tested now</h3>
-        <a href="/queue" class="btn-test">GET TESTED NOW</a>
+    </div>
+
+    <div id="qModal" style="display:none; position:fixed; background:rgba(0,0,0,0.8); width:100%; height:100%; top:0; left:0; padding:100px;">
+        <div style="background:#1c1e22; padding:30px; width:400px; margin:auto; border-radius:10px;">
+            <form action="/queue/join" method="POST">
+                <input type="text" name="ign" placeholder="Minecraft IGN" required><br><br>
+                <input type="text" name="timezone" placeholder="Timezone (EST/GMT)" required><br><br>
+                <select name="server"><option>NA</option><option>EU</option><option>AS</option></select><br><br>
+                <button type="submit" class="btn-test">Submit Application</button>
+            </form>
+        </div>
     </div>
 </body>
 </html>
