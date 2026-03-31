@@ -1,0 +1,12 @@
+<body>
+    <h1>Tier Leaderboard</h1>
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+        <% users.forEach(user => { %>
+            <div style="background:#2f3136; padding: 10px;">
+                <strong class="txt-<%= user.role %>"><%= user.username %></strong> 
+                - Tier: <%= user.tier %>
+                <a href="/ticket/<%= user._id %>">Open Ticket</a>
+            </div>
+        <% }) %>
+    </div>
+</body>
