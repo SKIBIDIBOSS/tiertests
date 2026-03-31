@@ -413,3 +413,50 @@ class Database {
 }
 
 module.exports = Database;
+// Get test details
+getTestDetails(testId) {
+    return new Promise((resolve, reject) => {
+        this.db.get(`
+            SELECT t.*, 
+                   u1.username as tester_username,
+                   u2.username as testee_username
+            FROM tests t
+            LEFT JOIN users u1 ON t.tester_id = u1.id
+            LEFT JOIN users u2 ON t.testee_id = u2.id
+            WHERE t.id = ?
+        `, [testId], (err, row) => {
+            if (err) reject(err);
+            else resolve(row);
+        });
+    });
+}
+
+// Save test message
+saveTestMessage(testId, userId, message) {
+    return new Promise((resolve, reject) => {
+        this.db.run(
+            'INSERT INTO test_messages (test_id, user_id, message, timestamp) VALUES (?, ?, ?, ?)',
+            [testId, userId, message, new Date().toISOString()],
+            (err) => {
+                if (err) reject(err);
+                else resolve();
+            }
+        );
+    });
+}
+
+// Get test messages
+getTestMessages(testId) {
+    return new Promise((resolve, reject) => {
+        this.db.all(`
+            SELECT tm.*, u.username 
+            FROM test_messages tm
+            JOIN users u ON tm.user_id = u.id
+            WHERE tm.test_id = ?
+            ORDER BY tm.timestamp ASC
+        `, [testId], (err, rows) => {
+            if (err) reject(err);
+            else resolve(rows);
+        });
+    });
+}
