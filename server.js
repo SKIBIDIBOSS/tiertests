@@ -6,49 +6,36 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// --- SETTINGS ---
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// --- DATABASE CONNECTION ---
 mongoose.connect(process.env.MONGODB_URI)
-    .then(() => console.log("✅ HUB DATABASE CONNECTED"))
-    .catch(err => console.error("❌ CONNECTION ERROR:", err.message));
+    .then(() => console.log("✅ SKIBIDIBOSS DB CONNECTED"))
+    .catch(err => console.error("❌ DB ERROR:", err.message));
 
-// --- USER MODEL ---
 const User = mongoose.model('User', new mongoose.Schema({
     username: String,
     role: { type: String, default: 'user' },
-    tier: { type: String, default: 'Unranked' },
-    isBanned: { type: Boolean, default: false }
+    tier: { type: String, default: 'Unranked' }
 }));
 
 // --- ROUTES ---
 
-// Main Hub (Leaderboard + Sidebar + Chat)
+// 1. PUBLIC HUB
 app.get('/', async (req, res) => {
-    try {
-        const users = await User.find({ isBanned: false }).sort({ tier: 1 });
-        // We pass fake 'stats' to make the UI look professional
-        res.render('index', { 
-            users: users,
-            stats: { active: users.length + 5, queuing: 12, status: "Online" }
-        });
-    } catch (err) {
-        res.render('index', { users: [], stats: { active: 0, queuing: 0, status: "Offline" } });
-    }
+    const users = await User.find().sort({ tier: 1 });
+    res.render('index', { users });
 });
 
-// Admin Panel
+// 2. ADMIN PANEL (Full Power)
 app.get('/admin', async (req, res) => {
     const users = await User.find();
     res.render('admin', { users });
 });
 
-// Create/Update Logic for Admin
 app.post('/admin/action', async (req, res) => {
     const { username, tier, role, action, userId } = req.body;
     if (action === 'create') await User.create({ username, tier, role });
@@ -56,4 +43,16 @@ app.post('/admin/action', async (req, res) => {
     res.redirect('/admin');
 });
 
-app.listen(PORT, () => console.log(`🚀 HUB ONLINE ON PORT ${PORT}`));
+// 3. TESTER PANEL (Update Ranks Only)
+app.get('/tester', async (req, res) => {
+    const users = await User.find();
+    res.render('tester', { users });
+});
+
+app.post('/tester/update', async (req, res) => {
+    const { userId, newTier } = req.body;
+    await User.findByIdAndUpdate(userId, { tier: newTier });
+    res.redirect('/tester');
+});
+
+app.listen(PORT, () => console.log(`🚀 SKIBIDIBOSS ONLINE`));
