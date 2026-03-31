@@ -1,56 +1,12 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>ADMIN | SKIBIDIBOSS X LINING</title>
-    <style>
-        body { background: #0b0c0e; color: #fff; font-family: sans-serif; padding: 40px; }
-        .card { background: #18191c; padding: 25px; border-radius: 12px; border: 1px solid #ff4757; margin-bottom: 30px; }
-        input, select, button { padding: 10px; margin: 5px; background: #000; color: #fff; border: 1px solid #333; border-radius: 5px; }
-        button { background: #ff4757; border: none; font-weight: bold; cursor: pointer; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #222; }
-    </style>
-</head>
-<body>
-    <div class="card">
-        <h2 style="color: #ff4757; margin-top: 0;">STAFF COMMAND CENTER</h2>
-        <form action="/admin/add" method="POST">
-            <input type="text" name="username" placeholder="New Username" required>
-            <input type="password" name="password" placeholder="Set Password" required>
-            <select name="role">
-                <option value="user">Player</option>
-                <option value="tester">Tester</option>
-                <option value="admin">Admin</option>
-            </select>
-            <select name="tier">
-                <option value="Unranked">Select Tier</option>
-                <option value="HT1">HT1</option>
-                <option value="LT1">LT1</option>
-                <option value="HT2">HT2</option>
-                <option value="LT2">LT2</option>
-            </select>
-            <button type="submit">REGISTER / UPDATE</button>
+<body style="background: #090a0b; color: white; font-family: sans-serif; padding: 50px;">
+    <h1>Admin Staff Management</h1>
+    <div style="background: #18191c; padding: 30px; border-radius: 12px; max-width: 400px;">
+        <h3>Create New Tester</h3>
+        <form action="/admin/create-tester" method="POST">
+            <input type="text" name="username" placeholder="Tester Username" style="width:100%; padding:10px; margin-bottom:10px; background:#000; color:#fff; border:1px solid #333;">
+            <input type="password" name="password" placeholder="Tester Password" style="width:100%; padding:10px; margin-bottom:20px; background:#000; color:#fff; border:1px solid #333;">
+            <button type="submit" style="background:#00d1ff; color:#000; padding:10px; width:100%; border:none; font-weight:bold; cursor:pointer;">CREATE ACCOUNT</button>
         </form>
     </div>
-    <table>
-        <thead><tr><th>USER</th><th>ROLE</th><th>TIER</th><th>ACTION</th></tr></thead>
-        <tbody>
-            <% users.forEach(u => { %>
-                <tr>
-                    <td><%= u.username %></td>
-                    <td style="color: #00d1ff;"><%= u.role %></td>
-                    <td><b><%= u.tier %></b></td>
-                    <td>
-                        <form action="/admin/delete" method="POST" style="display:inline;">
-                            <input type="hidden" name="userId" value="<%= u._id %>">
-                            <button type="submit" style="background:transparent; color:#ff4757; border:1px solid #ff4757; padding: 5px 10px;">DELETE</button>
-                        </form>
-                    </td>
-                </tr>
-            <% }) %>
-        </tbody>
-    </table>
-    <br><a href="/" style="color: #555; text-decoration: none;">← Exit Terminal</a>
+    <br><a href="/" style="color:#8e9297;">← Return to Dashboard</a>
 </body>
-</html>
