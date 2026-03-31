@@ -1,0 +1,20 @@
+<body style="padding: 50px;">
+    <h1>Admin Panel</h1>
+    <% users.forEach(user => { %>
+        <div class="admin-card">
+            <span class="txt-<%= user.role %>"><%= user.username %></span> (Tier: <%= user.tier %>)
+            <form action="/admin/action" method="POST" style="display:inline;">
+                <input type="hidden" name="userId" value="<%= user._id %>">
+                <select name="tier">
+                    <option value="HT1">HT1</option>
+                    <option value="LT1">LT1</option>
+                    <option value="Unranked">Unranked</option>
+                </select>
+                <button name="action" value="updateTier">Update Tier</button>
+                <button name="action" value="ban" style="background:red;">Ban</button>
+                <button name="action" value="delete">Delete</button>
+            </form>
+        </div>
+    <% }) %>
+    <a href="/">Back to Leaderboard</a>
+</body>
