@@ -467,3 +467,120 @@ body {
         font-size: 0.875rem;
     }
 }
+
+/* ── Role-based text colors (Discord-style) ── */
+.role-color-admin { color: #ff4444 !important; }
+.role-color-tester { color: #4f8eff !important; }
+.role-color-user { color: #e8eeff !important; }
+
+/* ── Role badges ── */
+.role-pill {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 3px;
+}
+.role-pill-admin { background: rgba(255,68,68,0.15); color: #ff4444; border: 1px solid rgba(255,68,68,0.3); }
+.role-pill-tester { background: rgba(79,142,255,0.15); color: #4f8eff; border: 1px solid rgba(79,142,255,0.3); }
+.role-pill-player { background: rgba(138,157,196,0.1); color: #8a9dc4; border: 1px solid rgba(138,157,196,0.2); }
+
+/* ── Discord-style chat messages ── */
+.discord-msg {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 6px 0;
+}
+.discord-avatar {
+    width: 36px; height: 36px;
+    border-radius: 4px;
+    background: #111e35;
+    border: 2px solid #1e2d52;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 14px;
+    flex-shrink: 0;
+}
+.discord-avatar.admin { border-color: #ff4444; color: #ff4444; }
+.discord-avatar.tester { border-color: #4f8eff; color: #4f8eff; }
+.discord-body { flex: 1; }
+.discord-header { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
+.discord-name { font-weight: 700; font-size: 14px; }
+.discord-name.admin { color: #ff4444; }
+.discord-name.tester { color: #4f8eff; }
+.discord-name.user { color: #e8eeff; }
+.discord-time { font-size: 10px; color: #4a5a7a; }
+.discord-content { font-size: 14px; color: #e8eeff; line-height: 1.6; }
+
+/* ── Ticket status badges ── */
+.ticket-status-open { color: #ffd700; font-weight: 700; }
+.ticket-status-closed { color: #4a5a7a; }
+
+/* ── Tier value colors ── */
+.tier-val-HT1 { color: #ff6b00; font-weight: 700; }
+.tier-val-HT2 { color: #ffd700; font-weight: 700; }
+.tier-val-HT3 { color: #ff3dff; font-weight: 700; }
+.tier-val-LT1 { color: #ff9b3d; font-weight: 700; }
+.tier-val-LT2 { color: #9b59ff; font-weight: 700; }
+.tier-val-LT3 { color: #4a9eff; font-weight: 700; }
+.tier-val-Unrated { color: #4a5a7a; }
+
+/* ── Admin panel enhancements ── */
+.admin-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+.admin-stat-box {
+    background: #0d1526;
+    border: 1px solid #1e2d52;
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+}
+.admin-stat-num {
+    font-size: 36px;
+    font-weight: 700;
+    color: #4f8eff;
+}
+.admin-stat-lbl {
+    font-size: 11px;
+    color: #4a5a7a;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-top: 4px;
+}
+
+/* ── Profile tier grid ── */
+.profile-tier-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+}
+.profile-tier-box {
+    background: #080d1a;
+    border: 1px solid #1e2d52;
+    border-radius: 8px;
+    padding: 14px 10px;
+    text-align: center;
+}
+.profile-tier-icon { font-size: 22px; margin-bottom: 6px; }
+.profile-tier-label {
+    font-size: 9px;
+    color: #4a5a7a;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 5px;
+}
+.profile-tier-val {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+@media (max-width: 600px) {
+    .profile-tier-grid { grid-template-columns: repeat(3, 1fr); }
+}

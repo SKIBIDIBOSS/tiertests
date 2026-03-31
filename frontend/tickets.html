@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Forum - MC Tier Testing</title>
+    <title>Support Tickets - MC Tier Testing</title>
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;800&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -64,13 +64,13 @@
         .nav-username { font-family: var(--font-display); font-size: 14px; font-weight: 600; }
 
         /* Layout */
-        .forum-layout {
+        .tickets-layout {
             display: flex;
             height: calc(100vh - 56px);
         }
 
-        /* Posts sidebar */
-        .posts-sidebar {
+        /* Tickets sidebar */
+        .tickets-sidebar {
             width: 320px;
             background: var(--bg-secondary);
             border-right: 1px solid var(--border);
@@ -78,14 +78,14 @@
             flex-direction: column;
             flex-shrink: 0;
         }
-        .posts-header {
+        .tickets-header {
             padding: 16px;
             border-bottom: 1px solid var(--border);
             display: flex;
             align-items: center;
             justify-content: space-between;
         }
-        .posts-header h2 {
+        .tickets-header h2 {
             font-family: var(--font-display);
             font-size: 16px;
             font-weight: 700;
@@ -93,7 +93,7 @@
             text-transform: uppercase;
             color: var(--text-secondary);
         }
-        .btn-new-post {
+        .btn-new-ticket {
             background: var(--accent);
             color: #fff;
             border: none;
@@ -106,9 +106,9 @@
             cursor: pointer;
             transition: all 0.2s;
         }
-        .btn-new-post:hover { background: #6aa3ff; }
-        .posts-list { flex: 1; overflow-y: auto; padding: 8px; }
-        .post-item {
+        .btn-new-ticket:hover { background: #6aa3ff; }
+        .tickets-list { flex: 1; overflow-y: auto; padding: 8px; }
+        .ticket-item {
             padding: 12px;
             border-radius: 6px;
             cursor: pointer;
@@ -116,9 +116,9 @@
             margin-bottom: 4px;
             border: 1px solid transparent;
         }
-        .post-item:hover { background: var(--bg-card); border-color: var(--border); }
-        .post-item.active { background: rgba(79,142,255,0.1); border-color: var(--accent); }
-        .post-item-title {
+        .ticket-item:hover { background: var(--bg-card); border-color: var(--border); }
+        .ticket-item.active { background: rgba(79,142,255,0.1); border-color: var(--accent); }
+        .ticket-item-subject {
             font-family: var(--font-display);
             font-size: 14px;
             font-weight: 600;
@@ -128,7 +128,7 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
-        .post-item-meta {
+        .ticket-item-meta {
             font-family: var(--font-mono);
             font-size: 11px;
             color: var(--text-dim);
@@ -136,48 +136,52 @@
             gap: 8px;
             align-items: center;
         }
-        .post-item-author { font-weight: 600; }
-        .role-admin { color: var(--role-admin) !important; }
-        .role-tester { color: var(--role-tester) !important; }
+        .status-open { color: var(--gold); }
+        .status-closed { color: var(--text-dim); }
 
-        /* Post view */
-        .post-view {
+        /* Ticket chat view */
+        .ticket-view {
             flex: 1;
             display: flex;
             flex-direction: column;
             overflow: hidden;
         }
-        .post-view-header {
-            padding: 20px 24px 16px;
+        .ticket-view-header {
+            padding: 16px 24px;
             border-bottom: 1px solid var(--border);
             background: var(--bg-card);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
-        .post-view-title {
+        .ticket-view-title {
             font-family: var(--font-display);
-            font-size: 22px;
+            font-size: 18px;
             font-weight: 700;
             letter-spacing: 1px;
-            margin-bottom: 8px;
         }
-        .post-view-meta {
+        .ticket-view-meta {
             font-family: var(--font-mono);
-            font-size: 12px;
+            font-size: 11px;
             color: var(--text-dim);
-            display: flex;
-            gap: 12px;
-            align-items: center;
+            margin-top: 4px;
         }
-        .post-view-body {
-            padding: 20px 24px;
-            font-size: 15px;
-            line-height: 1.7;
-            color: var(--text-secondary);
-            border-bottom: 1px solid var(--border);
-            background: var(--bg-card);
+        .btn-close-ticket {
+            background: rgba(255,68,68,0.15);
+            color: var(--red);
+            border: 1px solid rgba(255,68,68,0.3);
+            padding: 6px 16px;
+            border-radius: 4px;
+            font-family: var(--font-display);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
         }
+        .btn-close-ticket:hover { background: rgba(255,68,68,0.25); }
 
-        /* Comments / chat area */
-        .comments-area {
+        /* Chat messages */
+        .ticket-messages {
             flex: 1;
             overflow-y: auto;
             padding: 16px 24px;
@@ -185,30 +189,30 @@
             flex-direction: column;
             gap: 12px;
         }
-        .comment-msg {
+        .chat-msg {
             display: flex;
             gap: 12px;
             align-items: flex-start;
         }
-        .comment-avatar {
+        .chat-avatar {
             width: 36px; height: 36px; border-radius: 4px;
             background: var(--bg-elevated); border: 2px solid var(--border);
             display: flex; align-items: center; justify-content: center;
             font-family: var(--font-display); font-weight: 700; font-size: 14px;
             flex-shrink: 0;
         }
-        .comment-avatar.admin { border-color: var(--role-admin); color: var(--role-admin); }
-        .comment-avatar.tester { border-color: var(--role-tester); color: var(--role-tester); }
-        .comment-body { flex: 1; }
-        .comment-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-        .comment-username {
+        .chat-avatar.admin { border-color: var(--role-admin); color: var(--role-admin); }
+        .chat-avatar.tester { border-color: var(--role-tester); color: var(--role-tester); }
+        .chat-body { flex: 1; }
+        .chat-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+        .chat-username {
             font-family: var(--font-display);
             font-size: 14px;
             font-weight: 700;
         }
-        .comment-username.admin { color: var(--role-admin); }
-        .comment-username.tester { color: var(--role-tester); }
-        .comment-username.user { color: var(--role-user); }
+        .chat-username.admin { color: var(--role-admin); }
+        .chat-username.tester { color: var(--role-tester); }
+        .chat-username.user { color: var(--role-user); }
         .role-badge {
             font-family: var(--font-mono);
             font-size: 9px;
@@ -219,11 +223,23 @@
         }
         .role-badge.admin { background: rgba(255,68,68,0.15); color: var(--role-admin); border: 1px solid rgba(255,68,68,0.3); }
         .role-badge.tester { background: rgba(79,142,255,0.15); color: var(--role-tester); border: 1px solid rgba(79,142,255,0.3); }
-        .comment-time { font-family: var(--font-mono); font-size: 10px; color: var(--text-dim); }
-        .comment-content { font-size: 14px; color: var(--text-primary); line-height: 1.6; }
+        .chat-time { font-family: var(--font-mono); font-size: 10px; color: var(--text-dim); }
+        .chat-content { font-size: 14px; color: var(--text-primary); line-height: 1.6; }
 
-        /* Comment input */
-        .comment-input-area {
+        /* System message */
+        .system-msg {
+            text-align: center;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--text-dim);
+            padding: 8px;
+            background: var(--bg-elevated);
+            border-radius: 4px;
+            border: 1px solid var(--border);
+        }
+
+        /* Message input */
+        .ticket-input-area {
             padding: 16px 24px;
             border-top: 1px solid var(--border);
             background: var(--bg-secondary);
@@ -231,7 +247,7 @@
             gap: 10px;
             align-items: flex-end;
         }
-        .comment-input {
+        .ticket-input {
             flex: 1;
             background: var(--bg-elevated);
             border: 1px solid var(--border);
@@ -246,8 +262,9 @@
             max-height: 120px;
             transition: border-color 0.2s;
         }
-        .comment-input:focus { border-color: var(--accent); }
-        .comment-input::placeholder { color: var(--text-dim); }
+        .ticket-input:focus { border-color: var(--accent); }
+        .ticket-input::placeholder { color: var(--text-dim); }
+        .ticket-input:disabled { opacity: 0.5; cursor: not-allowed; }
         .btn-send {
             background: var(--accent);
             color: #fff;
@@ -262,9 +279,10 @@
             white-space: nowrap;
         }
         .btn-send:hover { background: #6aa3ff; }
+        .btn-send:disabled { opacity: 0.5; cursor: not-allowed; }
 
         /* Empty state */
-        .empty-post-view {
+        .empty-ticket-view {
             flex: 1;
             display: flex;
             align-items: center;
@@ -273,8 +291,19 @@
             gap: 16px;
             color: var(--text-dim);
         }
-        .empty-post-view .icon { font-size: 48px; }
-        .empty-post-view p { font-family: var(--font-mono); font-size: 13px; }
+        .empty-ticket-view .icon { font-size: 48px; }
+        .empty-ticket-view p { font-family: var(--font-mono); font-size: 13px; }
+
+        /* Auth required */
+        .auth-required {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 16px;
+            color: var(--text-dim);
+        }
 
         /* Modal */
         .modal {
@@ -333,7 +362,7 @@
         }
         .form-input:focus { border-color: var(--accent); }
         .form-input::placeholder { color: var(--text-dim); }
-        textarea.form-input { resize: vertical; min-height: 120px; }
+        textarea.form-input { resize: vertical; min-height: 100px; }
         .btn-primary {
             background: var(--accent); color: #fff; border: none;
             padding: 10px 24px; border-radius: 4px;
@@ -349,16 +378,11 @@
         }
         .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
         .error-msg { color: var(--red); font-size: 13px; font-family: var(--font-mono); padding: 8px 12px; background: rgba(255,68,68,0.1); border: 1px solid rgba(255,68,68,0.3); border-radius: 4px; margin-top: 8px; }
+        .success-msg { color: var(--green); font-size: 13px; font-family: var(--font-mono); padding: 8px 12px; background: rgba(68,255,136,0.1); border: 1px solid rgba(68,255,136,0.3); border-radius: 4px; margin-top: 8px; }
 
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: var(--bg-secondary); }
         ::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 3px; }
-
-        @media (max-width: 768px) {
-            .posts-sidebar { width: 100%; position: absolute; z-index: 50; height: calc(100vh - 56px); transform: translateX(-100%); transition: transform 0.3s; }
-            .posts-sidebar.open { transform: translateX(0); }
-            .post-view { width: 100%; }
-        }
     </style>
 </head>
 <body>
@@ -366,8 +390,8 @@
         <a href="index.html" class="nav-logo">MC<span>TIER</span>TEST</a>
         <div class="nav-links">
             <a href="index.html">Home</a>
-            <a href="forum.html" class="active">Forum</a>
-            <a href="tickets.html">Tickets</a>
+            <a href="forum.html">Forum</a>
+            <a href="tickets.html" class="active">Tickets</a>
             <a href="profile.html">Profile</a>
             <a href="admin.html" id="adminNavLink" style="display:none">Admin</a>
         </div>
@@ -378,62 +402,67 @@
         </div>
     </nav>
 
-    <div class="forum-layout">
-        <!-- Posts Sidebar -->
-        <div class="posts-sidebar" id="postsSidebar">
-            <div class="posts-header">
-                <h2>💬 Forum</h2>
-                <button class="btn-new-post" id="newPostBtn" onclick="openNewPostModal()" style="display:none">+ Post</button>
+    <div class="tickets-layout" id="ticketsLayout">
+        <!-- Auth required state -->
+        <div class="auth-required" id="authRequired">
+            <div style="font-size:48px">🎫</div>
+            <p style="font-family:var(--font-mono);font-size:13px;color:var(--text-dim)">You must be logged in to view tickets</p>
+            <a href="index.html" style="background:var(--accent);color:#fff;padding:10px 24px;border-radius:4px;text-decoration:none;font-family:var(--font-display);font-weight:600;font-size:15px;">Login</a>
+        </div>
+
+        <!-- Tickets sidebar (hidden until auth) -->
+        <div class="tickets-sidebar" id="ticketsSidebar" style="display:none">
+            <div class="tickets-header">
+                <h2>🎫 Tickets</h2>
+                <button class="btn-new-ticket" onclick="openNewTicketModal()">+ New</button>
             </div>
-            <div class="posts-list" id="postsList">
-                <div style="padding:20px;text-align:center;color:var(--text-dim);font-family:var(--font-mono);font-size:12px;">Loading posts...</div>
+            <div class="tickets-list" id="ticketsList">
+                <div style="padding:20px;text-align:center;color:var(--text-dim);font-family:var(--font-mono);font-size:12px;">Loading tickets...</div>
             </div>
         </div>
 
-        <!-- Post View -->
-        <div class="post-view" id="postView">
-            <div class="empty-post-view" id="emptyPostView">
-                <div class="icon">💬</div>
-                <p>Select a post to read it</p>
-                <p style="margin-top:4px;font-size:11px;">or create a new one</p>
+        <!-- Ticket view (hidden until auth) -->
+        <div class="ticket-view" id="ticketView" style="display:none">
+            <div class="empty-ticket-view" id="emptyTicketView">
+                <div class="icon">🎫</div>
+                <p>Select a ticket to view it</p>
+                <p style="margin-top:4px;font-size:11px;">or create a new support ticket</p>
             </div>
-            <div id="postContent" style="display:none;flex:1;display:none;flex-direction:column;overflow:hidden;">
-                <div class="post-view-header">
-                    <div class="post-view-title" id="pvTitle"></div>
-                    <div class="post-view-meta">
-                        <span>By <span id="pvAuthor" style="font-weight:700"></span></span>
-                        <span id="pvDate"></span>
-                        <span id="pvCommentCount"></span>
+            <div id="ticketContent" style="display:none;flex:1;flex-direction:column;overflow:hidden;">
+                <div class="ticket-view-header">
+                    <div>
+                        <div class="ticket-view-title" id="tvSubject"></div>
+                        <div class="ticket-view-meta" id="tvMeta"></div>
                     </div>
+                    <button class="btn-close-ticket" id="closeTicketBtn" onclick="closeCurrentTicket()" style="display:none">✕ Close Ticket</button>
                 </div>
-                <div class="post-view-body" id="pvBody"></div>
-                <div class="comments-area" id="commentsArea"></div>
-                <div class="comment-input-area" id="commentInputArea" style="display:none">
-                    <textarea class="comment-input" id="commentInput" placeholder="Write a reply..." rows="1"
-                        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendComment();}"></textarea>
-                    <button class="btn-send" onclick="sendComment()">Reply</button>
+                <div class="ticket-messages" id="ticketMessages"></div>
+                <div class="ticket-input-area" id="ticketInputArea">
+                    <textarea class="ticket-input" id="ticketMsgInput" placeholder="Type a message..." rows="1"
+                        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendTicketMessage();}"></textarea>
+                    <button class="btn-send" id="ticketSendBtn" onclick="sendTicketMessage()">Send</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- New Post Modal -->
-    <div class="modal" id="newPostModal">
+    <!-- New Ticket Modal -->
+    <div class="modal" id="newTicketModal">
         <div class="modal-box">
-            <button class="modal-close" onclick="closeModal('newPostModal')">×</button>
-            <div class="modal-title">New Post</div>
+            <button class="modal-close" onclick="closeModal('newTicketModal')">×</button>
+            <div class="modal-title">New Support Ticket</div>
             <div class="form-group">
-                <label>Title</label>
-                <input class="form-input" type="text" id="postTitle" placeholder="Post title...">
+                <label>Subject</label>
+                <input class="form-input" type="text" id="ticketSubject" placeholder="Brief description of your issue...">
             </div>
             <div class="form-group">
-                <label>Content</label>
-                <textarea class="form-input" id="postContent" placeholder="Write your post..."></textarea>
+                <label>Message</label>
+                <textarea class="form-input" id="ticketMessage" placeholder="Describe your issue in detail..."></textarea>
             </div>
-            <div id="postError"></div>
+            <div id="ticketError"></div>
             <div style="display:flex;gap:10px;margin-top:16px;">
-                <button class="btn-ghost" style="flex:1" onclick="closeModal('newPostModal')">Cancel</button>
-                <button class="btn-primary" style="flex:2" onclick="submitPost()">Publish Post</button>
+                <button class="btn-ghost" style="flex:1" onclick="closeModal('newTicketModal')">Cancel</button>
+                <button class="btn-primary" style="flex:2" onclick="submitNewTicket()">Submit Ticket</button>
             </div>
         </div>
     </div>
@@ -441,15 +470,13 @@
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script>
         let currentUser = null;
-        let currentPostId = null;
+        let currentTicketId = null;
         let socket = null;
-        let allPosts = [];
+        let allTickets = [];
 
         // ── Init ──────────────────────────────────────────────────────────
         document.addEventListener('DOMContentLoaded', async () => {
             await checkAuth();
-            await loadPosts();
-            initSocket();
         });
 
         async function checkAuth() {
@@ -461,170 +488,228 @@
                     document.getElementById('navUser').style.display = 'flex';
                     document.getElementById('navAvatar').textContent = data.username[0].toUpperCase();
                     document.getElementById('navUsername').textContent = data.username;
-                    document.getElementById('newPostBtn').style.display = 'block';
                     if (data.isAdmin) document.getElementById('adminNavLink').style.display = 'inline';
+
+                    // Show tickets UI
+                    document.getElementById('authRequired').style.display = 'none';
+                    document.getElementById('ticketsSidebar').style.display = 'flex';
+                    document.getElementById('ticketView').style.display = 'flex';
+
+                    await loadTickets();
+                    initSocket();
                 }
             } catch (e) {}
         }
 
         function initSocket() {
             socket = io();
-            socket.emit('join-forum');
-            socket.on('forum-post', (post) => {
-                allPosts.unshift(post);
-                renderPostsList();
+            socket.on('ticket-message', (msg) => {
+                if (msg.ticket_id == currentTicketId) {
+                    appendMessage(msg);
+                }
             });
-            socket.on('forum-comment', (comment) => {
-                if (comment.post_id == currentPostId) {
-                    appendComment(comment);
+            socket.on('ticket-closed', (data) => {
+                if (data.ticketId == currentTicketId) {
+                    const ticket = allTickets.find(t => t.id == currentTicketId);
+                    if (ticket) ticket.status = 'closed';
+                    renderTicketsList();
+                    updateTicketClosedState();
                 }
             });
         }
 
-        // ── Posts ─────────────────────────────────────────────────────────
-        async function loadPosts() {
+        // ── Tickets ───────────────────────────────────────────────────────
+        async function loadTickets() {
             try {
-                const res = await fetch('/api/forum/posts');
-                allPosts = await res.json();
-                renderPostsList();
+                const res = await fetch('/api/tickets');
+                allTickets = await res.json();
+                renderTicketsList();
             } catch (e) {
-                document.getElementById('postsList').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-dim);font-family:var(--font-mono);font-size:12px;">Failed to load posts</div>';
+                document.getElementById('ticketsList').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-dim);font-family:var(--font-mono);font-size:12px;">Failed to load tickets</div>';
             }
         }
 
-        function renderPostsList() {
-            const el = document.getElementById('postsList');
-            if (allPosts.length === 0) {
-                el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-dim);font-family:var(--font-mono);font-size:12px;">No posts yet. Be the first!</div>';
+        function renderTicketsList() {
+            const el = document.getElementById('ticketsList');
+            if (allTickets.length === 0) {
+                el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-dim);font-family:var(--font-mono);font-size:12px;">No tickets yet</div>';
                 return;
             }
-            el.innerHTML = allPosts.map(p => {
-                const roleClass = p.is_admin ? 'admin' : p.is_tester ? 'tester' : '';
-                const isActive = p.id == currentPostId ? 'active' : '';
+            el.innerHTML = allTickets.map(t => {
+                const isActive = t.id == currentTicketId ? 'active' : '';
+                const statusClass = t.status === 'open' ? 'status-open' : 'status-closed';
                 return `
-                    <div class="post-item ${isActive}" onclick="openPost(${p.id})">
-                        <div class="post-item-title">${escHtml(p.title)}</div>
-                        <div class="post-item-meta">
-                            <span class="post-item-author ${roleClass}">${escHtml(p.username)}</span>
+                    <div class="ticket-item ${isActive}" onclick="openTicket(${t.id})">
+                        <div class="ticket-item-subject">${escHtml(t.subject)}</div>
+                        <div class="ticket-item-meta">
+                            <span class="${statusClass}">${t.status.toUpperCase()}</span>
                             <span>·</span>
-                            <span>${timeAgo(p.created_at)}</span>
-                            <span>·</span>
-                            <span>💬 ${p.comment_count || 0}</span>
+                            <span>${timeAgo(t.created_at)}</span>
+                            ${currentUser.isAdmin ? `<span>· ${escHtml(t.username)}</span>` : ''}
                         </div>
                     </div>
                 `;
             }).join('');
         }
 
-        async function openPost(postId) {
-            currentPostId = postId;
-            renderPostsList(); // update active state
+        async function openTicket(ticketId) {
+            currentTicketId = ticketId;
+            renderTicketsList();
+            if (socket) socket.emit('join-ticket', ticketId);
             try {
-                const res = await fetch('/api/forum/post/' + postId);
-                const post = await res.json();
-                renderPost(post);
-                // Join socket room for this post
-                if (socket) socket.emit('join-forum-post', postId);
+                const res = await fetch(`/api/ticket/${ticketId}/messages`);
+                const ticket = await res.json();
+                renderTicket(ticket);
             } catch (e) {}
         }
 
-        function renderPost(post) {
-            document.getElementById('emptyPostView').style.display = 'none';
-            const pc = document.getElementById('postContent');
-            pc.style.display = 'flex';
-            pc.style.flexDirection = 'column';
-            pc.style.overflow = 'hidden';
-            pc.style.flex = '1';
+        function renderTicket(ticket) {
+            document.getElementById('emptyTicketView').style.display = 'none';
+            const tc = document.getElementById('ticketContent');
+            tc.style.display = 'flex';
+            tc.style.flexDirection = 'column';
+            tc.style.overflow = 'hidden';
+            tc.style.flex = '1';
 
-            const roleClass = post.is_admin ? 'admin' : post.is_tester ? 'tester' : '';
-            document.getElementById('pvTitle').textContent = post.title;
-            document.getElementById('pvAuthor').textContent = post.username;
-            document.getElementById('pvAuthor').className = roleClass;
-            document.getElementById('pvDate').textContent = new Date(post.created_at).toLocaleDateString();
-            document.getElementById('pvCommentCount').textContent = `${(post.comments || []).length} replies`;
-            document.getElementById('pvBody').textContent = post.content;
+            document.getElementById('tvSubject').textContent = ticket.subject;
+            document.getElementById('tvMeta').textContent = `By ${ticket.username} · ${new Date(ticket.created_at).toLocaleDateString()} · Status: ${ticket.status.toUpperCase()}`;
 
-            const commentsArea = document.getElementById('commentsArea');
-            commentsArea.innerHTML = '';
-            (post.comments || []).forEach(c => appendComment(c));
+            const closeBtn = document.getElementById('closeTicketBtn');
+            const input = document.getElementById('ticketMsgInput');
+            const sendBtn = document.getElementById('ticketSendBtn');
 
-            if (currentUser) {
-                document.getElementById('commentInputArea').style.display = 'flex';
+            if (ticket.status === 'open') {
+                closeBtn.style.display = 'block';
+                input.disabled = false;
+                sendBtn.disabled = false;
+                input.placeholder = 'Type a message...';
+            } else {
+                closeBtn.style.display = 'none';
+                input.disabled = true;
+                sendBtn.disabled = true;
+                input.placeholder = 'This ticket is closed';
             }
-            commentsArea.scrollTop = commentsArea.scrollHeight;
+
+            const msgArea = document.getElementById('ticketMessages');
+            msgArea.innerHTML = '';
+
+            // Show original message as first entry
+            appendMessage({
+                username: ticket.username,
+                is_admin: 0,
+                is_tester: 0,
+                message: ticket.message,
+                created_at: ticket.created_at
+            });
+
+            (ticket.messages || []).forEach(m => appendMessage(m));
+            msgArea.scrollTop = msgArea.scrollHeight;
         }
 
-        function appendComment(comment) {
-            const area = document.getElementById('commentsArea');
-            const roleClass = comment.is_admin ? 'admin' : comment.is_tester ? 'tester' : 'user';
+        function appendMessage(msg) {
+            const area = document.getElementById('ticketMessages');
+            const roleClass = msg.is_admin ? 'admin' : msg.is_tester ? 'tester' : 'user';
             const div = document.createElement('div');
-            div.className = 'comment-msg';
+            div.className = 'chat-msg';
             div.innerHTML = `
-                <div class="comment-avatar ${roleClass}">${(comment.username||'?')[0].toUpperCase()}</div>
-                <div class="comment-body">
-                    <div class="comment-header">
-                        <span class="comment-username ${roleClass}">${escHtml(comment.username)}</span>
+                <div class="chat-avatar ${roleClass}">${(msg.username||'?')[0].toUpperCase()}</div>
+                <div class="chat-body">
+                    <div class="chat-header">
+                        <span class="chat-username ${roleClass}">${escHtml(msg.username)}</span>
                         ${roleClass !== 'user' ? `<span class="role-badge ${roleClass}">${roleClass}</span>` : ''}
-                        <span class="comment-time">${timeAgo(comment.created_at)}</span>
+                        <span class="chat-time">${timeAgo(msg.created_at)}</span>
                     </div>
-                    <div class="comment-content">${escHtml(comment.content)}</div>
+                    <div class="chat-content">${escHtml(msg.message)}</div>
                 </div>
             `;
             area.appendChild(div);
             area.scrollTop = area.scrollHeight;
         }
 
-        async function sendComment() {
-            if (!currentUser) return;
-            const input = document.getElementById('commentInput');
-            const content = input.value.trim();
-            if (!content || !currentPostId) return;
+        function updateTicketClosedState() {
+            document.getElementById('closeTicketBtn').style.display = 'none';
+            const input = document.getElementById('ticketMsgInput');
+            const sendBtn = document.getElementById('ticketSendBtn');
+            input.disabled = true;
+            sendBtn.disabled = true;
+            input.placeholder = 'This ticket is closed';
+
+            const area = document.getElementById('ticketMessages');
+            const div = document.createElement('div');
+            div.className = 'system-msg';
+            div.textContent = '🔒 This ticket has been closed';
+            area.appendChild(div);
+            area.scrollTop = area.scrollHeight;
+
+            // Update meta
+            const ticket = allTickets.find(t => t.id == currentTicketId);
+            if (ticket) {
+                document.getElementById('tvMeta').textContent = `By ${ticket.username} · Status: CLOSED`;
+            }
+        }
+
+        async function sendTicketMessage() {
+            if (!currentUser || !currentTicketId) return;
+            const input = document.getElementById('ticketMsgInput');
+            const message = input.value.trim();
+            if (!message) return;
             try {
-                const res = await fetch('/api/forum/comment', {
+                const res = await fetch(`/api/ticket/${currentTicketId}/message`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ postId: currentPostId, content })
+                    body: JSON.stringify({ message })
                 });
                 const data = await res.json();
                 if (data.success) {
                     input.value = '';
-                    // Update comment count in list
-                    const post = allPosts.find(p => p.id == currentPostId);
-                    if (post) post.comment_count = (post.comment_count || 0) + 1;
-                    renderPostsList();
                 }
             } catch (e) {}
         }
 
-        // ── New Post Modal ────────────────────────────────────────────────
-        function openNewPostModal() {
-            if (!currentUser) { window.location.href = 'index.html'; return; }
-            document.getElementById('postTitle').value = '';
-            document.getElementById('postContent').value = '';
-            document.getElementById('postError').innerHTML = '';
-            openModal('newPostModal');
+        async function closeCurrentTicket() {
+            if (!currentTicketId) return;
+            if (!confirm('Close this ticket? This cannot be undone.')) return;
+            try {
+                const res = await fetch(`/api/ticket/${currentTicketId}/close`, { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    const ticket = allTickets.find(t => t.id == currentTicketId);
+                    if (ticket) ticket.status = 'closed';
+                    renderTicketsList();
+                    updateTicketClosedState();
+                }
+            } catch (e) {}
         }
 
-        async function submitPost() {
-            const title = document.getElementById('postTitle').value.trim();
-            const content = document.getElementById('postContent').value.trim();
-            const errEl = document.getElementById('postError');
-            if (!title || !content) { errEl.innerHTML = '<div class="error-msg">Title and content are required</div>'; return; }
+        // ── New Ticket Modal ──────────────────────────────────────────────
+        function openNewTicketModal() {
+            document.getElementById('ticketSubject').value = '';
+            document.getElementById('ticketMessage').value = '';
+            document.getElementById('ticketError').innerHTML = '';
+            openModal('newTicketModal');
+        }
+
+        async function submitNewTicket() {
+            const subject = document.getElementById('ticketSubject').value.trim();
+            const message = document.getElementById('ticketMessage').value.trim();
+            const errEl = document.getElementById('ticketError');
+            if (!subject || !message) { errEl.innerHTML = '<div class="error-msg">Subject and message are required</div>'; return; }
             try {
-                const res = await fetch('/api/forum/post', {
+                const res = await fetch('/api/ticket/create', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ title, content })
+                    body: JSON.stringify({ subject, message })
                 });
                 const data = await res.json();
                 if (data.success) {
-                    closeModal('newPostModal');
-                    openPost(data.post.id);
+                    closeModal('newTicketModal');
+                    await loadTickets();
+                    openTicket(data.ticketId);
                 } else {
                     errEl.innerHTML = `<div class="error-msg">${data.error}</div>`;
                 }
             } catch (e) {
-                errEl.innerHTML = '<div class="error-msg">Failed to create post</div>';
+                errEl.innerHTML = '<div class="error-msg">Failed to create ticket</div>';
             }
         }
 

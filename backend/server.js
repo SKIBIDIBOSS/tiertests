@@ -60,6 +60,14 @@ io.on('connection', (socket) => {
             timestamp: new Date()
         });
     });
+
+    socket.on('join-forum', () => {
+        socket.join('forum');
+    });
+
+    socket.on('join-ticket', (ticketId) => {
+        socket.join('ticket-' + ticketId);
+    });
     
     socket.on('disconnect', () => {
         console.log('Client disconnected');
@@ -89,6 +97,9 @@ app.post('/api/login', async (req, res) => {
         const isValid = await auth.verifyPassword(password, user.password);
         
         if (isValid) {
+            if (user.is_banned === 1) {
+                return res.status(403).json({ success: false, error: 'Your account has been banned' });
+            }
             req.session.userId = user.id;
             req.session.username = user.username;
             req.session.isAdmin = user.is_admin === 1;
@@ -98,7 +109,8 @@ app.post('/api/login', async (req, res) => {
                 user: {
                     id: user.id,
                     username: user.username,
-                    isAdmin: user.is_admin === 1
+                    isAdmin: user.is_admin === 1,
+                    isTester: user.is_tester === 1
                 }
             });
         } else {
@@ -114,13 +126,26 @@ app.post('/api/logout', (req, res) => {
     res.json({ success: true });
 });
 
-app.get('/api/check-auth', (req, res) => {
+app.get('/api/check-auth', async (req, res) => {
     if (req.session.userId) {
-        res.json({ 
-            authenticated: true, 
-            username: req.session.username,
-            isAdmin: req.session.isAdmin
-        });
+        try {
+            const user = await db.getUserById(req.session.userId);
+            res.json({ 
+                authenticated: true, 
+                username: req.session.username,
+                isAdmin: req.session.isAdmin || false,
+                isTester: user ? user.is_tester === 1 : false,
+                userId: req.session.userId
+            });
+        } catch (e) {
+            res.json({ 
+                authenticated: true, 
+                username: req.session.username,
+                isAdmin: req.session.isAdmin || false,
+                isTester: false,
+                userId: req.session.userId
+            });
+        }
     } else {
         res.json({ authenticated: false });
     }
@@ -266,6 +291,315 @@ app.post('/api/change-password', async (req, res) => {
         } else {
             res.status(401).json({ error: 'Current password is incorrect' });
         }
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// ── Forum Endpoints ────────────────────────────────────────────────────────
+
+app.get('/api/forum/posts', async (req, res) => {
+    try {
+        const posts = await db.getForumPosts();
+        res.json(posts);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+app.post('/api/forum/post', async (req, res) => {
+    try {
+        if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+        const { title, content } = req.body;
+        if (!title || !content) return res.status(400).json({ error: 'Title and content required' });
+        const post = await db.createForumPost(req.session.userId, title, content);
+        const user = await db.getUserById(req.session.userId);
+        const newPost = {
+            id: post.id,
+            title,
+            content,
+            username: user.username,
+            is_admin: user.is_admin,
+            is_tester: user.is_tester,
+            created_at: new Date().toISOString(),
+            comment_count: 0
+        };
+        const io = req.app.get('io');
+        io.to('forum').emit('forum-post', newPost);
+        res.json({ success: true, post: newPost });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+app.get('/api/forum/post/:postId', async (req, res) => {
+    try {
+        const post = await db.getForumPostWithComments(req.params.postId);
+        if (!post) return res.status(404).json({ error: 'Post not found' });
+        res.json(post);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+app.post('/api/forum/comment', async (req, res) => {
+    try {
+        if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+        const { postId, content } = req.body;
+        if (!postId || !content) return res.status(400).json({ error: 'Post ID and content required' });
+        await db.createForumComment(req.session.userId, postId, content);
+        const user = await db.getUserById(req.session.userId);
+        const comment = {
+            post_id: postId,
+            content,
+            username: user.username,
+            is_admin: user.is_admin,
+            is_tester: user.is_tester,
+            created_at: new Date().toISOString()
+        };
+        const io = req.app.get('io');
+        io.to('forum-post-' + postId).emit('forum-comment', comment);
+        res.json({ success: true, comment });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// ── Ticket Endpoints ───────────────────────────────────────────────────────
+
+app.get('/api/tickets', async (req, res) => {
+    try {
+        if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+        const user = await db.getUserById(req.session.userId);
+        let tickets;
+        if (user.is_admin) {
+            tickets = await db.getTickets();
+        } else {
+            tickets = await db.getTicketsByUser(req.session.userId);
+        }
+        res.json(tickets);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+app.post('/api/ticket/create', async (req, res) => {
+    try {
+        if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+        const { subject, message } = req.body;
+        if (!subject || !message) return res.status(400).json({ error: 'Subject and message required' });
+        const ticket = await db.createTicket(req.session.userId, subject, message);
+        res.json({ success: true, ticketId: ticket.id });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+app.get('/api/ticket/:ticketId/messages', async (req, res) => {
+    try {
+        if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+        const ticket = await db.getTicketWithMessages(req.params.ticketId);
+        if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
+        const user = await db.getUserById(req.session.userId);
+        if (!user.is_admin && ticket.user_id !== req.session.userId) {
+            return res.status(403).json({ error: 'Access denied' });
+        }
+        res.json(ticket);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+app.post('/api/ticket/:ticketId/message', async (req, res) => {
+    try {
+        if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+        const { message } = req.body;
+        if (!message) return res.status(400).json({ error: 'Message required' });
+        const ticket = await db.getTicketWithMessages(req.params.ticketId);
+        if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
+        const user = await db.getUserById(req.session.userId);
+        if (!user.is_admin && ticket.user_id !== req.session.userId) {
+            return res.status(403).json({ error: 'Access denied' });
+        }
+        if (ticket.status === 'closed') return res.status(400).json({ error: 'Ticket is closed' });
+        await db.addTicketMessage(req.params.ticketId, req.session.userId, message);
+        const msgData = {
+            ticket_id: req.params.ticketId,
+            message,
+            username: user.username,
+            is_admin: user.is_admin,
+            is_tester: user.is_tester,
+            created_at: new Date().toISOString()
+        };
+        const io = req.app.get('io');
+        io.to('ticket-' + req.params.ticketId).emit('ticket-message', msgData);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+app.post('/api/ticket/:ticketId/close', async (req, res) => {
+    try {
+        if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+        const user = await db.getUserById(req.session.userId);
+        const ticket = await db.getTicketWithMessages(req.params.ticketId);
+        if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
+        if (!user.is_admin && ticket.user_id !== req.session.userId) {
+            return res.status(403).json({ error: 'Access denied' });
+        }
+        await db.closeTicket(req.params.ticketId);
+        const io = req.app.get('io');
+        io.to('ticket-' + req.params.ticketId).emit('ticket-closed', { ticketId: req.params.ticketId });
+        res.json({ success: true });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// ── Admin Endpoints ────────────────────────────────────────────────────────
+
+app.get('/api/admin/users', async (req, res) => {
+    try {
+        if (!req.session.userId || !req.session.isAdmin) return res.status(403).json({ error: 'Admin access required' });
+        const users = await db.getAllUsersWithTiers();
+        res.json(users);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+app.get('/api/admin/tickets', async (req, res) => {
+    try {
+        if (!req.session.userId || !req.session.isAdmin) return res.status(403).json({ error: 'Admin access required' });
+        const tickets = await db.getTickets();
+        res.json(tickets);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+app.post('/api/admin/update-tier', async (req, res) => {
+    try {
+        if (!req.session.userId || !req.session.isAdmin) return res.status(403).json({ error: 'Admin access required' });
+        const { userId, sumo, bedfight, classic, skywars, boxing } = req.body;
+        if (!userId) return res.status(400).json({ error: 'User ID required' });
+        await db.updateUserTiers(userId, sumo || 'Unrated', bedfight || 'Unrated', classic || 'Unrated', skywars || 'Unrated', boxing || 'Unrated');
+        res.json({ success: true });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+app.post('/api/admin/ban-user', async (req, res) => {
+    try {
+        if (!req.session.userId || !req.session.isAdmin) return res.status(403).json({ error: 'Admin access required' });
+        const { userId, action } = req.body;
+        if (!userId) return res.status(400).json({ error: 'User ID required' });
+        const target = await db.getUserById(userId);
+        if (!target) return res.status(404).json({ error: 'User not found' });
+        if (target.is_admin) return res.status(400).json({ error: 'Cannot ban an admin' });
+        if (action === 'unban') {
+            await db.unbanUser(userId);
+        } else {
+            await db.banUser(userId);
+        }
+        res.json({ success: true });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+app.post('/api/admin/delete-user', async (req, res) => {
+    try {
+        if (!req.session.userId || !req.session.isAdmin) return res.status(403).json({ error: 'Admin access required' });
+        const { username } = req.body;
+        if (!username) return res.status(400).json({ error: 'Username required' });
+        const user = await db.getUserByUsername(username);
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        if (user.is_admin) return res.status(400).json({ error: 'Cannot delete an admin account' });
+        await db.deleteUserTiers(user.id);
+        await db.deleteUserQueueEntries(user.id);
+        await db.deleteUserTests(user.id);
+        await db.deleteUserForumPosts(user.id);
+        await db.deleteUserComments(user.id);
+        await db.deleteUserTickets(user.id);
+        await db.deleteUser(user.id);
+        res.json({ success: true, message: `User ${username} deleted` });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+app.post('/api/admin/add-tester', async (req, res) => {
+    try {
+        if (!req.session.userId || !req.session.isAdmin) return res.status(403).json({ error: 'Admin access required' });
+        const { userId } = req.body;
+        if (!userId) return res.status(400).json({ error: 'User ID required' });
+        await db.makeTester(userId);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+app.get('/api/admin/user-details/:username', async (req, res) => {
+    try {
+        if (!req.session.userId || !req.session.isAdmin) return res.status(403).json({ error: 'Admin access required' });
+        const user = await db.getUserProfile(req.params.username);
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        res.json(user);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+app.post('/api/admin/reset-password', async (req, res) => {
+    try {
+        if (!req.session.userId || !req.session.isAdmin) return res.status(403).json({ error: 'Admin access required' });
+        const { username, newPassword } = req.body;
+        if (!username || !newPassword) return res.status(400).json({ error: 'Username and new password required' });
+        const user = await db.getUserByUsername(username);
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        const hashed = await auth.hashPassword(newPassword);
+        await db.changePassword(user.id, hashed);
+        res.json({ success: true, message: `Password reset for ${username}` });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+app.post('/api/admin/remove-from-queue', async (req, res) => {
+    try {
+        if (!req.session.userId || !req.session.isAdmin) return res.status(403).json({ error: 'Admin access required' });
+        const { queueId } = req.body;
+        if (!queueId) return res.status(400).json({ error: 'Queue ID required' });
+        await db.deleteQueueEntry(queueId);
+        res.json({ success: true, message: 'Removed from queue' });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+app.post('/api/admin/clear-queue', async (req, res) => {
+    try {
+        if (!req.session.userId || !req.session.isAdmin) return res.status(403).json({ error: 'Admin access required' });
+        await db.clearAllQueue();
+        res.json({ success: true, message: 'Queue cleared' });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+app.post('/api/admin/update-tiers', async (req, res) => {
+    try {
+        if (!req.session.userId || !req.session.isAdmin) return res.status(403).json({ error: 'Admin access required' });
+        const { username, tiers } = req.body;
+        if (!username || !tiers) return res.status(400).json({ error: 'Username and tiers required' });
+        const user = await db.getUserByUsername(username);
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        await db.updateUserTiers(user.id, tiers.sumo || 'Unrated', tiers.bedfight || 'Unrated', tiers.classic || 'Unrated', tiers.skywars || 'Unrated', tiers.boxing || 'Unrated');
+        res.json({ success: true, message: `Tiers updated for ${username}` });
     } catch (error) {
         res.status(400).json({ error: error.message });
     }

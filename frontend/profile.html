@@ -4,67 +4,508 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Profile - MC Tier Testing</title>
-    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #050810;
+            --bg-secondary: #080d1a;
+            --bg-card: #0d1526;
+            --bg-elevated: #111e35;
+            --border: #1e2d52;
+            --border-bright: #2a3f73;
+            --accent: #4f8eff;
+            --accent-glow: rgba(79,142,255,0.3);
+            --gold: #ffd700;
+            --red: #ff4444;
+            --green: #44ff88;
+            --text-primary: #e8eeff;
+            --text-secondary: #8a9dc4;
+            --text-dim: #4a5a7a;
+            --font-display: 'Rajdhani', sans-serif;
+            --font-mono: 'Share Tech Mono', monospace;
+            --font-body: 'Exo 2', sans-serif;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: var(--bg-primary); color: var(--text-primary); font-family: var(--font-body); min-height: 100vh; }
+
+        .navbar {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 0 24px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .nav-logo { font-family: var(--font-display); font-size: 20px; font-weight: 700; letter-spacing: 3px; color: var(--text-primary); text-decoration: none; }
+        .nav-logo span { color: var(--accent); }
+        .nav-links { display: flex; gap: 4px; align-items: center; }
+        .nav-links a {
+            color: var(--text-secondary); text-decoration: none;
+            font-family: var(--font-display); font-size: 14px; font-weight: 500;
+            padding: 6px 14px; border-radius: 6px; transition: all 0.15s;
+        }
+        .nav-links a:hover { color: var(--text-primary); background: var(--bg-card); }
+        .nav-links a.active { color: var(--accent); background: rgba(79,142,255,0.1); }
+        .nav-user { display: flex; align-items: center; gap: 10px; }
+        .nav-avatar {
+            width: 32px; height: 32px; border-radius: 4px;
+            background: var(--bg-elevated); border: 2px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+            font-family: var(--font-display); font-weight: 700; color: var(--accent); font-size: 13px;
+            overflow: hidden;
+        }
+        .nav-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+        .container { max-width: 900px; margin: 0 auto; padding: 32px 24px; }
+
+        /* Profile hero */
+        .profile-hero {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 28px;
+            margin-bottom: 24px;
+            display: flex;
+            gap: 24px;
+            align-items: flex-start;
+        }
+        .profile-avatar-wrap { position: relative; flex-shrink: 0; }
+        .profile-avatar {
+            width: 100px; height: 100px; border-radius: 8px;
+            background: var(--bg-elevated); border: 3px solid var(--border-bright);
+            display: flex; align-items: center; justify-content: center;
+            font-family: var(--font-display); font-size: 40px;
+            font-weight: 700; color: var(--accent); overflow: hidden;
+        }
+        .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .avatar-upload-btn {
+            position: absolute; bottom: -8px; right: -8px;
+            width: 28px; height: 28px;
+            background: var(--bg-card); border: 1px solid var(--border-bright);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; font-size: 13px;
+        }
+        .profile-info { flex: 1; }
+        .profile-username {
+            font-family: var(--font-display);
+            font-size: 28px; font-weight: 700; letter-spacing: 2px;
+            margin-bottom: 6px;
+        }
+        .role-badge {
+            display: inline-block;
+            font-family: var(--font-mono); font-size: 10px;
+            letter-spacing: 2px; text-transform: uppercase;
+            padding: 3px 10px; border-radius: 3px;
+            margin-bottom: 10px;
+        }
+        .role-badge.admin { background: rgba(255,68,68,0.12); border: 1px solid #ff4444; color: #ff4444; }
+        .role-badge.tester { background: rgba(79,142,255,0.12); border: 1px solid var(--accent); color: var(--accent); }
+        .role-badge.player { background: rgba(79,142,255,0.08); border: 1px solid var(--border-bright); color: var(--text-secondary); }
+        .profile-ign { font-family: var(--font-mono); font-size: 13px; color: var(--text-secondary); margin-bottom: 4px; }
+        .profile-joined { font-family: var(--font-mono); font-size: 11px; color: var(--text-dim); }
+        .profile-actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+
+        /* Edit form */
+        .edit-form {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 14px;
+            display: none;
+        }
+        .edit-form.open { display: block; }
+        .edit-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+        .form-group { flex: 1; min-width: 160px; }
+        .form-group label {
+            display: block; font-size: 10px; color: var(--text-secondary);
+            text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 5px;
+            font-family: var(--font-mono);
+        }
+        .form-input {
+            width: 100%;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 8px 12px;
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .form-input:focus { border-color: var(--accent); }
+        .form-input::placeholder { color: var(--text-dim); }
+        select.form-input { cursor: pointer; }
+
+        /* Tier cards */
+        .section-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        .section-heading {
+            font-family: var(--font-display);
+            font-size: 13px; font-weight: 700;
+            letter-spacing: 3px; text-transform: uppercase;
+            color: var(--text-secondary); margin-bottom: 16px;
+        }
+        .tiers-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+        }
+        .tier-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px 12px;
+            text-align: center;
+            transition: border-color 0.2s;
+        }
+        .tier-card:hover { border-color: var(--border-bright); }
+        .tier-icon { font-size: 24px; margin-bottom: 8px; }
+        .tier-name {
+            font-family: var(--font-mono); font-size: 9px;
+            letter-spacing: 2px; text-transform: uppercase;
+            color: var(--text-dim); margin-bottom: 6px;
+        }
+        .tier-value {
+            font-family: var(--font-display); font-size: 16px;
+            font-weight: 700; letter-spacing: 1px;
+        }
+        .tier-HT1 { color: #ff6b00; }
+        .tier-HT2 { color: #ffd700; }
+        .tier-HT3 { color: #ff3dff; }
+        .tier-LT1 { color: #ff9b3d; }
+        .tier-LT2 { color: #9b59ff; }
+        .tier-LT3 { color: #4a9eff; }
+        .tier-Unrated { color: var(--text-dim); }
+
+        /* Password section */
+        .pw-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+        /* Buttons */
+        .btn {
+            padding: 8px 20px; border: none; border-radius: 4px;
+            font-family: var(--font-display); font-size: 14px; font-weight: 600;
+            letter-spacing: 1px; cursor: pointer; transition: all 0.2s;
+            text-transform: uppercase;
+        }
+        .btn-primary { background: var(--accent); color: #fff; }
+        .btn-primary:hover { background: #6aa3ff; }
+        .btn-ghost { background: transparent; border: 1px solid var(--border-bright); color: var(--text-secondary); }
+        .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+        .btn-sm { padding: 6px 14px; font-size: 12px; }
+
+        .error-msg { color: var(--red); font-size: 13px; font-family: var(--font-mono); padding: 8px 12px; background: rgba(255,68,68,0.1); border: 1px solid rgba(255,68,68,0.3); border-radius: 4px; margin-top: 8px; }
+        .success-msg { color: var(--green); font-size: 13px; font-family: var(--font-mono); padding: 8px 12px; background: rgba(68,255,136,0.1); border: 1px solid rgba(68,255,136,0.3); border-radius: 4px; margin-top: 8px; }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-secondary); }
+        ::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 3px; }
+
+        @media (max-width: 768px) {
+            .tiers-grid { grid-template-columns: repeat(3, 1fr); }
+            .pw-grid { grid-template-columns: 1fr; }
+            .profile-hero { flex-direction: column; }
+        }
+    </style>
 </head>
 <body>
     <nav class="navbar">
-        <div class="nav-container">
-            <h1 class="logo">MC Tier Testing</h1>
-            <div class="nav-links">
-                <a href="index.html">Leaderboard</a>
-                <a href="dashboard.html">Dashboard</a>
-                <a href="profile.html">Profile</a>
-                <a href="forum.html">Forum</a>
-                <a href="#" id="authLink">Login</a>
-            </div>
+        <a href="index.html" class="nav-logo">MC<span>TIER</span>TEST</a>
+        <div class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="forum.html">Forum</a>
+            <a href="tickets.html">Tickets</a>
+            <a href="profile.html" class="active">Profile</a>
+            <a href="admin.html" id="adminNavLink" style="display:none">Admin</a>
+        </div>
+        <div class="nav-user" id="navUser" style="display:none">
+            <div class="nav-avatar" id="navAvatar">?</div>
+            <a href="#" onclick="doLogout()" style="color:var(--text-dim);font-size:13px;font-family:var(--font-mono);text-decoration:none;margin-left:8px;">logout</a>
         </div>
     </nav>
 
-    <div class="container profile-container">
-        <div id="userProfileDisplay" class="profile-display">
-            <div class="profile-header-large">
-                <img id="profileAvatar" src="" alt="Profile Picture" class="profile-avatar-large">
-                <h1 id="profileDisplayName"></h1>
-                <p id="profileJoinDate"></p>
+    <div class="container">
+        <!-- Not logged in state -->
+        <div id="notLoggedIn" style="text-align:center;padding:80px 20px;display:none;">
+            <div style="font-size:48px;margin-bottom:16px;">👤</div>
+            <p style="font-family:var(--font-mono);color:var(--text-dim);margin-bottom:20px;">You must be logged in to view your profile</p>
+            <a href="index.html" class="btn btn-primary">Go to Login</a>
+        </div>
+
+        <!-- Profile content -->
+        <div id="profileContent" style="display:none;">
+            <!-- Hero -->
+            <div class="profile-hero">
+                <div class="profile-avatar-wrap">
+                    <div class="profile-avatar" id="profileAvatar">?</div>
+                    <label class="avatar-upload-btn" title="Change avatar">
+                        📷<input type="file" accept="image/*" style="display:none" onchange="uploadAvatar(this)">
+                    </label>
+                </div>
+                <div class="profile-info">
+                    <div class="profile-username" id="profileUsername"></div>
+                    <div class="role-badge" id="roleBadge"></div>
+                    <div class="profile-ign">IGN: <strong id="profileIgn"></strong></div>
+                    <div class="profile-ign" style="margin-top:4px;">Timezone: <strong id="profileTimezone"></strong></div>
+                    <div class="profile-ign" style="margin-top:4px;">Server: <strong id="profileServer"></strong></div>
+                    <div class="profile-joined" id="profileJoined" style="margin-top:6px;"></div>
+                    <div class="profile-actions">
+                        <button class="btn btn-ghost btn-sm" onclick="toggleEditForm()">✏️ Edit Profile</button>
+                    </div>
+                    <div class="edit-form" id="editForm">
+                        <div class="edit-row">
+                            <div class="form-group">
+                                <label>Minecraft IGN</label>
+                                <input class="form-input" type="text" id="editIgn" placeholder="Your IGN">
+                            </div>
+                            <div class="form-group">
+                                <label>Timezone</label>
+                                <select class="form-input" id="editTimezone">
+                                    <option value="">Select...</option>
+                                    <option>GMT-8 (PST)</option><option>GMT-5 (EST)</option>
+                                    <option>GMT+0 (GMT)</option><option>GMT+1 (CET)</option>
+                                    <option>GMT+3 (EET)</option><option>GMT+8 (CST)</option>
+                                    <option>GMT+9 (JST)</option><option>GMT+10 (AEST)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Preferred Server</label>
+                                <select class="form-input" id="editServer">
+                                    <option value="EU">EU</option><option value="NA">NA</option>
+                                    <option value="AS">AS</option><option value="AU">AU</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="editMsg"></div>
+                        <div style="display:flex;gap:8px;margin-top:8px;">
+                            <button class="btn btn-primary btn-sm" onclick="saveProfile()">Save Changes</button>
+                            <button class="btn btn-ghost btn-sm" onclick="toggleEditForm()">Cancel</button>
+                        </div>
+                    </div>
+                </div>
             </div>
-            
-            <div class="profile-stats">
-                <div class="stat-card">
-                    <h3>Sumo</h3>
-                    <p id="profileSumo">Unrated</p>
-                </div>
-                <div class="stat-card">
-                    <h3>Bedfight</h3>
-                    <p id="profileBedfight">Unrated</p>
-                </div>
-                <div class="stat-card">
-                    <h3>Classic</h3>
-                    <p id="profileClassic">Unrated</p>
-                </div>
-                <div class="stat-card">
-                    <h3>Skywars</h3>
-                    <p id="profileSkywars">Unrated</p>
-                </div>
-                <div class="stat-card">
-                    <h3>Boxing</h3>
-                    <p id="profileBoxing">Unrated</p>
+
+            <!-- Tier Stats -->
+            <div class="section-card">
+                <div class="section-heading">⚔️ Tier Rankings</div>
+                <div class="tiers-grid">
+                    <div class="tier-card">
+                        <div class="tier-icon">⚔️</div>
+                        <div class="tier-name">Sumo</div>
+                        <div class="tier-value tier-Unrated" id="tierSumo">Unrated</div>
+                    </div>
+                    <div class="tier-card">
+                        <div class="tier-icon">🛏️</div>
+                        <div class="tier-name">Bedfight</div>
+                        <div class="tier-value tier-Unrated" id="tierBedfight">Unrated</div>
+                    </div>
+                    <div class="tier-card">
+                        <div class="tier-icon">🗡️</div>
+                        <div class="tier-name">Classic</div>
+                        <div class="tier-value tier-Unrated" id="tierClassic">Unrated</div>
+                    </div>
+                    <div class="tier-card">
+                        <div class="tier-icon">🌌</div>
+                        <div class="tier-name">Skywars</div>
+                        <div class="tier-value tier-Unrated" id="tierSkywars">Unrated</div>
+                    </div>
+                    <div class="tier-card">
+                        <div class="tier-icon">🥊</div>
+                        <div class="tier-name">Boxing</div>
+                        <div class="tier-value tier-Unrated" id="tierBoxing">Unrated</div>
+                    </div>
                 </div>
             </div>
-            
-            <div class="profile-info-details">
-                <div class="info-row">
-                    <strong>IGN:</strong> <span id="profileIgn"></span>
+
+            <!-- Change Password -->
+            <div class="section-card">
+                <div class="section-heading">🔒 Change Password</div>
+                <div class="pw-grid">
+                    <div class="form-group">
+                        <label>Current Password</label>
+                        <input class="form-input" type="password" id="pwCurrent" placeholder="Current password">
+                    </div>
+                    <div class="form-group">
+                        <label>New Password</label>
+                        <input class="form-input" type="password" id="pwNew" placeholder="New password (min 6)">
+                    </div>
+                    <div class="form-group">
+                        <label>Confirm New Password</label>
+                        <input class="form-input" type="password" id="pwConfirm" placeholder="Repeat new password">
+                    </div>
                 </div>
-                <div class="info-row">
-                    <strong>Timezone:</strong> <span id="profileTimezone"></span>
-                </div>
-                <div class="info-row">
-                    <strong>Preferred Server:</strong> <span id="profileServer"></span>
-                </div>
+                <div id="pwMsg"></div>
+                <button class="btn btn-primary btn-sm" style="margin-top:12px;" onclick="changePassword()">Change Password</button>
             </div>
         </div>
     </div>
 
-    <script src="profile.js"></script>
+    <script>
+        let currentUser = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await checkAuth();
+        });
+
+        async function checkAuth() {
+            try {
+                const res = await fetch('/api/check-auth');
+                const data = await res.json();
+                if (data.authenticated) {
+                    currentUser = data;
+                    document.getElementById('navUser').style.display = 'flex';
+                    document.getElementById('navAvatar').textContent = data.username[0].toUpperCase();
+                    if (data.isAdmin) document.getElementById('adminNavLink').style.display = 'inline';
+                    document.getElementById('profileContent').style.display = 'block';
+                    await loadProfile();
+                } else {
+                    document.getElementById('notLoggedIn').style.display = 'block';
+                }
+            } catch (e) {
+                document.getElementById('notLoggedIn').style.display = 'block';
+            }
+        }
+
+        async function loadProfile() {
+            try {
+                const res = await fetch('/api/profile/' + currentUser.username);
+                const data = await res.json();
+
+                // Avatar
+                const avatarEl = document.getElementById('profileAvatar');
+                if (data.profile_picture) {
+                    avatarEl.innerHTML = `<img src="${data.profile_picture}" alt="">`;
+                    document.getElementById('navAvatar').innerHTML = `<img src="${data.profile_picture}" alt="">`;
+                } else {
+                    avatarEl.textContent = (data.username || '?')[0].toUpperCase();
+                }
+
+                document.getElementById('profileUsername').textContent = data.username;
+                document.getElementById('profileIgn').textContent = data.ign || data.username;
+                document.getElementById('profileTimezone').textContent = data.timezone || 'Not set';
+                document.getElementById('profileServer').textContent = data.preferred_server || 'Not set';
+                document.getElementById('profileJoined').textContent = 'Joined ' + new Date(data.created_at).toLocaleDateString();
+
+                // Role badge
+                const badge = document.getElementById('roleBadge');
+                if (data.is_admin) {
+                    badge.textContent = 'Admin';
+                    badge.className = 'role-badge admin';
+                } else if (data.is_tester) {
+                    badge.textContent = 'Tester';
+                    badge.className = 'role-badge tester';
+                } else {
+                    badge.textContent = 'Player';
+                    badge.className = 'role-badge player';
+                }
+
+                // Tiers
+                const tiers = {
+                    sumo: data.sumo_tier || 'Unrated',
+                    bedfight: data.bedfight_tier || 'Unrated',
+                    classic: data.classic_tier || 'Unrated',
+                    skywars: data.skywars_tier || 'Unrated',
+                    boxing: data.boxing_tier || 'Unrated'
+                };
+                Object.entries(tiers).forEach(([key, val]) => {
+                    const el = document.getElementById('tier' + key.charAt(0).toUpperCase() + key.slice(1));
+                    if (el) {
+                        el.textContent = val;
+                        el.className = 'tier-value tier-' + val.replace(' ', '');
+                    }
+                });
+
+                // Pre-fill edit form
+                document.getElementById('editIgn').value = data.ign || '';
+                document.getElementById('editTimezone').value = data.timezone || '';
+                document.getElementById('editServer').value = data.preferred_server || 'EU';
+            } catch (e) {}
+        }
+
+        function toggleEditForm() {
+            const form = document.getElementById('editForm');
+            form.classList.toggle('open');
+        }
+
+        async function saveProfile() {
+            const ign = document.getElementById('editIgn').value.trim();
+            const timezone = document.getElementById('editTimezone').value;
+            const preferredServer = document.getElementById('editServer').value;
+            const msgEl = document.getElementById('editMsg');
+            try {
+                const res = await fetch('/api/update-profile', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ign, timezone, preferredServer })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    msgEl.innerHTML = '<div class="success-msg">Profile updated!</div>';
+                    document.getElementById('profileIgn').textContent = ign;
+                    document.getElementById('profileTimezone').textContent = timezone;
+                    document.getElementById('profileServer').textContent = preferredServer;
+                    setTimeout(() => { msgEl.innerHTML = ''; toggleEditForm(); }, 1500);
+                } else {
+                    msgEl.innerHTML = `<div class="error-msg">${data.error}</div>`;
+                }
+            } catch (e) {
+                msgEl.innerHTML = '<div class="error-msg">Failed to save</div>';
+            }
+        }
+
+        async function uploadAvatar(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const fd = new FormData();
+            fd.append('profilePicture', file);
+            try {
+                const res = await fetch('/api/update-profile', { method: 'POST', body: fd });
+                const data = await res.json();
+                if (data.success) await loadProfile();
+            } catch (e) {}
+        }
+
+        async function changePassword() {
+            const current = document.getElementById('pwCurrent').value;
+            const next = document.getElementById('pwNew').value;
+            const confirm = document.getElementById('pwConfirm').value;
+            const msgEl = document.getElementById('pwMsg');
+            if (next !== confirm) { msgEl.innerHTML = '<div class="error-msg">Passwords do not match</div>'; return; }
+            if (next.length < 6) { msgEl.innerHTML = '<div class="error-msg">Minimum 6 characters</div>'; return; }
+            try {
+                const res = await fetch('/api/change-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ currentPassword: current, newPassword: next })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    msgEl.innerHTML = '<div class="success-msg">Password changed!</div>';
+                    document.getElementById('pwCurrent').value = '';
+                    document.getElementById('pwNew').value = '';
+                    document.getElementById('pwConfirm').value = '';
+                } else {
+                    msgEl.innerHTML = `<div class="error-msg">${data.error || 'Failed'}</div>`;
+                }
+            } catch (e) {
+                msgEl.innerHTML = '<div class="error-msg">Failed to change password</div>';
+            }
+        }
+
+        async function doLogout() {
+            await fetch('/api/logout', { method: 'POST' });
+            window.location.href = 'index.html';
+        }
+    </script>
 </body>
 </html>
