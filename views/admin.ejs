@@ -1,8 +1,55 @@
-<form action="/admin/action" method="POST">
-    <input type="hidden" name="key" value="<%= key %>">
-    </form>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ADMIN COMMAND | SKIBIDIBOSS</title>
+    <style>
+        body { background: #0b0c0e; color: #fff; font-family: sans-serif; padding: 40px; }
+        .card { background: #18191c; padding: 25px; border-radius: 12px; border: 1px solid #ff4757; margin-bottom: 20px; }
+        input, select, button { padding: 10px; margin: 5px; border-radius: 5px; background: #000; color: #fff; border: 1px solid #333; }
+        button { background: #ff4757; border: none; font-weight: bold; cursor: pointer; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #222; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1 style="color: #ff4757; margin: 0 0 20px 0;">STAFF MANAGEMENT</h1>
+        <form action="/admin/add" method="POST">
+            <input type="text" name="username" placeholder="Username" required>
+            <input type="password" name="password" placeholder="Set Password" required>
+            <select name="role">
+                <option value="user">Player</option>
+                <option value="tester">Tester</option>
+                <option value="admin">Admin</option>
+            </select>
+            <select name="tier">
+                <option value="Unranked">Tier (Optional)</option>
+                <option value="HT1">HT1</option>
+                <option value="LT1">LT1</option>
+            </select>
+            <button type="submit">REGISTER USER</button>
+        </form>
+    </div>
 
-<form action="/admin/action" method="POST">
-    <input type="hidden" name="key" value="<%= key %>">
-    <input type="hidden" name="action" value="delete">
-    </form>
+    <table>
+        <thead><tr><th>USER</th><th>ROLE</th><th>TIER</th><th>ACTION</th></tr></thead>
+        <tbody>
+            <% users.forEach(user => { %>
+                <tr>
+                    <td><%= user.username %></td>
+                    <td style="color: #00d1ff;"><%= user.role %></td>
+                    <td><%= user.tier %></td>
+                    <td>
+                        <form action="/admin/delete" method="POST">
+                            <input type="hidden" name="userId" value="<%= user._id %>">
+                            <button type="submit" style="background: transparent; color: #ff4757; border: 1px solid #ff4757;">DELETE</button>
+                        </form>
+                    </td>
+                </tr>
+            <% }) %>
+        </tbody>
+    </table>
+    <br><a href="/" style="color: #8e9297;">Return to Hub</a> | <a href="/logout" style="color: #ff4757;">Logout</a>
+</body>
+</html>
