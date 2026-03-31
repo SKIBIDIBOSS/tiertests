@@ -356,3 +356,133 @@ db.init().then(() => {
   console.error('Failed to initialize database:', err);
   process.exit(1);
 });
+// Import AdminManagement
+const AdminManagement = require('./admin-management');
+const adminManager = new AdminManagement(db);
+
+// Admin Routes
+
+// Get all users (admin only)
+app.get('/api/admin/users', async (req, res) => {
+    try {
+        if (!req.session.userId || !req.session.isAdmin) {
+            return res.status(403).json({ error: 'Not authorized' });
+        }
+        
+        const users = await adminManager.getAllUsers(req.session.userId);
+        res.json(users);
+    } catch (error) {
+        console.error('Get users error:', error);
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// Reset user password (admin only)
+app.post('/api/admin/reset-password', async (req, res) => {
+    try {
+        if (!req.session.userId || !req.session.isAdmin) {
+            return res.status(403).json({ error: 'Not authorized' });
+        }
+        
+        const { username, newPassword } = req.body;
+        const result = await adminManager.resetUserPassword(username, newPassword, req.session.userId);
+        res.json(result);
+    } catch (error) {
+        console.error('Reset password error:', error);
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// Delete user account (admin only)
+app.post('/api/admin/delete-user', async (req, res) => {
+    try {
+        if (!req.session.userId || !req.session.isAdmin) {
+            return res.status(403).json({ error: 'Not authorized' });
+        }
+        
+        const { username } = req.body;
+        const result = await adminManager.deleteUserAccount(username, req.session.userId);
+        res.json(result);
+    } catch (error) {
+        console.error('Delete user error:', error);
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// Update user tiers (admin only)
+app.post('/api/admin/update-tiers', async (req, res) => {
+    try {
+        if (!req.session.userId || !req.session.isAdmin) {
+            return res.status(403).json({ error: 'Not authorized' });
+        }
+        
+        const { username, tiers } = req.body;
+        const result = await adminManager.updateUserTiers(username, tiers, req.session.userId);
+        res.json(result);
+    } catch (error) {
+        console.error('Update tiers error:', error);
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// Remove from queue (admin only)
+app.post('/api/admin/remove-from-queue', async (req, res) => {
+    try {
+        if (!req.session.userId || !req.session.isAdmin) {
+            return res.status(403).json({ error: 'Not authorized' });
+        }
+        
+        const { queueId } = req.body;
+        const result = await adminManager.removeFromQueue(queueId, req.session.userId);
+        res.json(result);
+    } catch (error) {
+        console.error('Remove from queue error:', error);
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// Clear entire queue (admin only)
+app.post('/api/admin/clear-queue', async (req, res) => {
+    try {
+        if (!req.session.userId || !req.session.isAdmin) {
+            return res.status(403).json({ error: 'Not authorized' });
+        }
+        
+        const result = await adminManager.clearAllQueue(req.session.userId);
+        res.json(result);
+    } catch (error) {
+        console.error('Clear queue error:', error);
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// Get user details for editing (admin only)
+app.get('/api/admin/user-details/:username', async (req, res) => {
+    try {
+        if (!req.session.userId || !req.session.isAdmin) {
+            return res.status(403).json({ error: 'Not authorized' });
+        }
+        
+        const userDetails = await adminManager.getUserDetails(req.params.username, req.session.userId);
+        res.json(userDetails);
+    } catch (error) {
+        console.error('Get user details error:', error);
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// Bulk update tiers (admin only)
+app.post('/api/admin/bulk-update-tiers', async (req, res) => {
+    try {
+        if (!req.session.userId || !req.session.isAdmin) {
+            return res.status(403).json({ error: 'Not authorized' });
+        }
+        
+        const { updates } = req.body;
+        const result = await adminManager.bulkUpdateTiers(updates, req.session.userId);
+        res.json(result);
+    } catch (error) {
+        console.error('Bulk update error:', error);
+        res.status(400).json({ error: error.message });
+    }
+});
