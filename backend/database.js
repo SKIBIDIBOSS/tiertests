@@ -1,347 +1,415 @@
-const bcrypt = require('bcryptjs');
-const { v4: uuidv4 } = require('uuid');
-
-const RANKS = ['lt5','lt4','lt3','lt2','lt1','ht5','ht4','ht3','ht2','ht1'];
-const RANK_INDEX = {};
-RANKS.forEach((r, i) => RANK_INDEX[r] = i);
+const sqlite3 = require('sqlite3').verbose();
 
 class Database {
-  constructor() {
-    this.users = [];
-    this.queue = [];
-    this.tests = [];
-    this.forumPosts = [];
-    this.forumComments = [];
-    this.tickets = [];
-  }
-
-  async init() {
-    const adminPass = await bcrypt.hash('123123', 10);
-    const liningPass = await bcrypt.hash('lining123', 10);
-    const skibidiPass = await bcrypt.hash('skibidi123', 10);
-
-    this.users = [
-      {
-        id: 'admin-001', username: 'admin', password: adminPass,
-        ign: 'Admin', is_admin: 1, is_tester: 1,
-        timezone: 'GMT+0', preferred_server: 'EU',
-        profile_picture: null, ranks: {}
-      },
-      {
-        id: 'user-lining', username: 'lining', password: liningPass,
-        ign: 'lining', is_admin: 0, is_tester: 1,
-        timezone: 'GMT+0', preferred_server: 'EU',
-        profile_picture: null,
-        ranks: { sumo: 'lt2', bedfight: 'ht2', classic: 'ht3', nodebuff: 'lt3', builduhc: 'lt3', spleef: 'lt3' }
-      },
-      {
-        id: 'user-skibidi', username: 'SKIBIDIBOSS', password: skibidiPass,
-        ign: 'SKIBIDIBOSS', is_admin: 0, is_tester: 1,
-        timezone: 'GMT+0', preferred_server: 'EU',
-        profile_picture: null,
-        ranks: { sumo: 'lt3', bedfight: 'lt3', classic: 'lt3', nodebuff: 'lt3', builduhc: 'lt3', spleef: 'lt3' }
-      }
-    ];
-  }
-
-  async createUser(username, password, ign, timezone, preferredServer) {
-    if (this.users.find(u => u.username.toLowerCase() === username.toLowerCase()))
-      throw new Error('Username already taken');
-    const user = {
-      id: uuidv4(), username, password,
-      ign: ign || username, is_admin: 0, is_tester: 0,
-      timezone: timezone || '', preferred_server: preferredServer || 'EU',
-      profile_picture: null, ranks: {}
-    };
-    this.users.push(user);
-    return { id: user.id, username: user.username };
-  }
-
-  async getUserByUsername(username) {
-    return this.users.find(u => u.username.toLowerCase() === username.toLowerCase()) || null;
-  }
-
-  async getUserById(id) {
-    return this.users.find(u => u.id === id) || null;
-  }
-
-  async getUserProfile(username) {
-    const user = await this.getUserByUsername(username);
-    if (!user) return null;
-    const { password, ...safe } = user;
-    return safe;
-  }
-
-  async updateProfile(userId, ign, timezone, preferredServer, profilePicture) {
-    const user = this.users.find(u => u.id === userId);
-    if (!user) throw new Error('User not found');
-    if (ign) user.ign = ign;
-    if (timezone) user.timezone = timezone;
-    if (preferredServer) user.preferred_server = preferredServer;
-    if (profilePicture) user.profile_picture = profilePicture;
-  }
-
-  async changePassword(userId, hashedPassword) {
-    const user = this.users.find(u => u.id === userId);
-    if (!user) throw new Error('User not found');
-    user.password = hashedPassword;
-  }
-
-  async makeTester(userId) {
-    const user = this.users.find(u => u.id === userId);
-    if (!user) throw new Error('User not found');
-    user.is_tester = 1;
-  }
-
-  async isTester(userId) {
-    const user = this.users.find(u => u.id === userId);
-    return user ? user.is_tester === 1 : false;
-  }
-
-  async getLeaderboard() {
-    const gamemodes = ['sumo','bedfight','classic','nodebuff','builduhc','spleef'];
-    const result = {};
-    for (const gm of gamemodes) {
-      result[gm] = this.users
-        .filter(u => u.ranks && u.ranks[gm])
-        .map(u => ({
-          username: u.username, ign: u.ign,
-          profile_picture: u.profile_picture,
-          rank: u.ranks[gm],
-          rankIndex: RANK_INDEX[u.ranks[gm]] !== undefined ? RANK_INDEX[u.ranks[gm]] : -1
-        }))
-        .sort((a, b) => b.rankIndex - a.rankIndex);
+    constructor() {
+        this.db = new sqlite3.Database('./tier_testing.db');
     }
-    return result;
-  }
 
-  async addToQueue(userId, ign, timezone, preferredServer, username) {
-    const user = this.users.find(u => u.id === userId);
-    if (this.queue.find(q => q.user_id === userId && q.status === 'pending'))
-      throw new Error('Already in queue');
-    const entry = {
-      id: uuidv4(), user_id: userId,
-      username: username || (user && user.username),
-      ign: ign || (user && user.ign),
-      timezone, preferred_server: preferredServer,
-      status: 'pending', created_at: new Date().toISOString()
-    };
-    this.queue.push(entry);
-    return { id: entry.id };
-  }
+    init() {
+        return new Promise((resolve, reject) => {
+            this.db.serialize(() => {
+                this.db.run(`CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT UNIQUE NOT NULL,
+                    password TEXT NOT NULL,
+                    ign TEXT,
+                    timezone TEXT,
+                    preferred_server TEXT,
+                    profile_picture TEXT,
+                    is_admin INTEGER DEFAULT 0,
+                    is_tester INTEGER DEFAULT 0,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )`);
 
-  async getQueue() {
-    return this.queue.filter(q => q.status === 'pending');
-  }
+                this.db.run(`CREATE TABLE IF NOT EXISTS tiers (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    sumo_tier TEXT DEFAULT 'Unrated',
+                    bedfight_tier TEXT DEFAULT 'Unrated',
+                    classic_tier TEXT DEFAULT 'Unrated',
+                    skywars_tier TEXT DEFAULT 'Unrated',
+                    boxing_tier TEXT DEFAULT 'Unrated',
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id),
+                    UNIQUE(user_id)
+                )`);
 
-  async acceptTest(queueId, testerId) {
-    const entry = this.queue.find(q => q.id === queueId && q.status === 'pending');
-    if (!entry) throw new Error('Queue entry not found or already processed');
-    entry.status = 'processing';
-    const tester = this.users.find(u => u.id === testerId);
-    const test = {
-      id: uuidv4(), queue_id: queueId,
-      tester_id: testerId, tester_name: tester ? tester.username : '',
-      testee_id: entry.user_id, testee_name: entry.username,
-      testee_ign: entry.ign, preferred_server: entry.preferred_server,
-      status: 'active', started_at: new Date().toISOString(), messages: []
-    };
-    this.tests.push(test);
-    return { id: test.id };
-  }
+                this.db.run(`CREATE TABLE IF NOT EXISTS queue (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    ign TEXT NOT NULL,
+                    timezone TEXT,
+                    preferred_server TEXT,
+                    username TEXT,
+                    status TEXT DEFAULT 'pending',
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id)
+                )`);
 
-  async submitTestResult(testId, testerScore, testeeScore, testerName, testeeName, testeeIgn, server) {
-    const test = this.tests.find(t => t.id === testId);
-    if (!test) throw new Error('Test not found');
-    test.status = 'completed';
-    test.tester_score = parseInt(testerScore);
-    test.testee_score = parseInt(testeeScore);
-    test.tester_name = testerName;
-    test.testee_name = testeeName;
-    test.testee_ign = testeeIgn;
-    test.server = server;
-    test.completed_at = new Date().toISOString();
+                this.db.run(`CREATE TABLE IF NOT EXISTS tests (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    queue_id INTEGER NOT NULL,
+                    tester_id INTEGER NOT NULL,
+                    testee_id INTEGER NOT NULL,
+                    status TEXT DEFAULT 'active',
+                    tester_score INTEGER,
+                    testee_score INTEGER,
+                    tester_name TEXT,
+                    testee_name TEXT,
+                    testee_ign TEXT,
+                    server TEXT,
+                    started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    completed_at DATETIME,
+                    FOREIGN KEY (queue_id) REFERENCES queue(id),
+                    FOREIGN KEY (tester_id) REFERENCES users(id),
+                    FOREIGN KEY (testee_id) REFERENCES users(id)
+                )`);
 
-    const testee = this.users.find(u => u.id === test.testee_id);
-    const tester = this.users.find(u => u.id === test.tester_id);
-    if (testee && tester) {
-      const total = test.tester_score + test.testee_score;
-      const winRate = total > 0 ? test.testee_score / total : 0;
-      const gamemodes = ['sumo','bedfight','classic','nodebuff','builduhc','spleef'];
-      for (const gm of gamemodes) {
-        const testerRank = tester.ranks && tester.ranks[gm];
-        if (!testerRank) continue;
-        const testerIdx = RANK_INDEX[testerRank];
-        let newIdx;
-        if (winRate >= 0.6) newIdx = testerIdx + 1;
-        else if (winRate >= 0.4) newIdx = testerIdx;
-        else if (winRate >= 0.2) newIdx = testerIdx - 1;
-        else newIdx = testerIdx - 2;
-        const clamped = Math.max(0, Math.min(RANKS.length - 1, newIdx));
-        if (!testee.ranks) testee.ranks = {};
-        testee.ranks[gm] = RANKS[clamped];
-      }
+                this.db.run(`CREATE TABLE IF NOT EXISTS forum_posts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    title TEXT NOT NULL,
+                    content TEXT NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id)
+                )`);
+
+                this.db.run(`CREATE TABLE IF NOT EXISTS forum_comments (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    post_id INTEGER NOT NULL,
+                    user_id INTEGER NOT NULL,
+                    content TEXT NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (post_id) REFERENCES forum_posts(id),
+                    FOREIGN KEY (user_id) REFERENCES users(id)
+                )`);
+
+                this.db.run(`CREATE TABLE IF NOT EXISTS tickets (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    subject TEXT NOT NULL,
+                    message TEXT NOT NULL,
+                    status TEXT DEFAULT 'open',
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id)
+                )`, (err) => {
+                    if (err) reject(err);
+                    else resolve();
+                });
+            });
+        });
     }
-    this.queue = this.queue.filter(q => q.id !== test.queue_id);
-  }
 
-  async getTickets() {
-    return this.tickets.map(t => {
-      const user = this.users.find(u => u.id === t.user_id);
-      return Object.assign({}, t, { username: user ? user.username : 'Unknown' });
-    });
-  }
+    createUser(username, password, ign, timezone, preferredServer, isAdmin = false) {
+        return new Promise((resolve, reject) => {
+            const self = this;
+            this.db.run(
+                'INSERT INTO users (username, password, ign, timezone, preferred_server, is_admin) VALUES (?, ?, ?, ?, ?, ?)',
+                [username, password, ign, timezone, preferredServer, isAdmin ? 1 : 0],
+                function(err) {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        const userId = this.lastID;
+                        self.db.run('INSERT INTO tiers (user_id) VALUES (?)', [userId], (err2) => {
+                            if (err2) reject(err2);
+                            else resolve({ id: userId, username });
+                        });
+                    }
+                }
+            );
+        });
+    }
 
-  async createTicket(userId, subject, message) {
-    const ticket = {
-      id: uuidv4(), user_id: userId, subject, message,
-      status: 'open', created_at: new Date().toISOString()
-    };
-    this.tickets.push(ticket);
-    return ticket;
-  }
+    getUserByUsername(username) {
+        return new Promise((resolve, reject) => {
+            this.db.get('SELECT * FROM users WHERE username = ?', [username], (err, row) => {
+                if (err) reject(err);
+                else resolve(row);
+            });
+        });
+    }
 
-  async getForumPosts() {
-    return this.forumPosts.map(p => {
-      const user = this.users.find(u => u.id === p.user_id);
-      return Object.assign({}, p, { username: user ? user.username : 'Unknown' });
-    }).reverse();
-  }
+    getUserById(id) {
+        return new Promise((resolve, reject) => {
+            this.db.get('SELECT * FROM users WHERE id = ?', [id], (err, row) => {
+                if (err) reject(err);
+                else resolve(row);
+            });
+        });
+    }
 
-  async createForumPost(userId, title, content) {
-    const post = {
-      id: uuidv4(), user_id: userId, title, content,
-      created_at: new Date().toISOString()
-    };
-    this.forumPosts.push(post);
-    return { id: post.id };
-  }
+    getUserProfile(username) {
+        return new Promise((resolve, reject) => {
+            this.db.get(
+                'SELECT u.*, t.* FROM users u LEFT JOIN tiers t ON u.id = t.user_id WHERE u.username = ?',
+                [username],
+                (err, row) => {
+                    if (err) reject(err);
+                    else resolve(row);
+                }
+            );
+        });
+    }
 
-  async createForumComment(userId, postId, content) {
-    const user = this.users.find(u => u.id === userId);
-    this.forumComments.push({
-      id: uuidv4(), post_id: postId, user_id: userId,
-      username: user ? user.username : 'Unknown',
-      content, created_at: new Date().toISOString()
-    });
-  }
+    updateProfile(userId, ign, timezone, preferredServer, profilePicture) {
+        return new Promise((resolve, reject) => {
+            if (profilePicture) {
+                this.db.run('UPDATE users SET ign = ?, timezone = ?, preferred_server = ?, profile_picture = ? WHERE id = ?',
+                    [ign, timezone, preferredServer, profilePicture, userId], (err) => {
+                        if (err) reject(err);
+                        else resolve();
+                    });
+            } else {
+                this.db.run('UPDATE users SET ign = ?, timezone = ?, preferred_server = ? WHERE id = ?',
+                    [ign, timezone, preferredServer, userId], (err) => {
+                        if (err) reject(err);
+                        else resolve();
+                    });
+            }
+        });
+    }
 
-  async getForumComments(postId) {
-    return this.forumComments.filter(c => c.post_id === postId);
-  }
+    changePassword(userId, hashedPassword) {
+        return new Promise((resolve, reject) => {
+            this.db.run('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, userId], (err) => {
+                if (err) reject(err);
+                else resolve();
+            });
+        });
+    }
+
+    changePasswordByUsername(username, hashedPassword) {
+        return new Promise((resolve, reject) => {
+            this.db.run('UPDATE users SET password = ? WHERE username = ?', [hashedPassword, username], (err) => {
+                if (err) reject(err);
+                else resolve();
+            });
+        });
+    }
+
+    updateUserTiers(userId, sumo, bedfight, classic, skywars, boxing) {
+        return new Promise((resolve, reject) => {
+            this.db.run(
+                'UPDATE tiers SET sumo_tier = ?, bedfight_tier = ?, classic_tier = ?, skywars_tier = ?, boxing_tier = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?',
+                [sumo, bedfight, classic, skywars, boxing, userId], (err) => {
+                    if (err) reject(err);
+                    else resolve();
+                });
+        });
+    }
+
+    makeTester(userId) {
+        return new Promise((resolve, reject) => {
+            this.db.run('UPDATE users SET is_tester = 1 WHERE id = ?', [userId], (err) => {
+                if (err) reject(err);
+                else resolve();
+            });
+        });
+    }
+
+    isTester(userId) {
+        return new Promise((resolve, reject) => {
+            this.db.get('SELECT is_tester FROM users WHERE id = ?', [userId], (err, row) => {
+                if (err) reject(err);
+                else resolve(row && row.is_tester === 1);
+            });
+        });
+    }
+
+    getLeaderboard() {
+        return new Promise((resolve, reject) => {
+            this.db.all(`SELECT u.username, u.ign, t.* FROM users u JOIN tiers t ON u.id = t.user_id ORDER BY u.created_at DESC LIMIT 50`, (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows);
+            });
+        });
+    }
+
+    addToQueue(userId, ign, timezone, preferredServer, username) {
+        return new Promise((resolve, reject) => {
+            this.db.run('INSERT INTO queue (user_id, ign, timezone, preferred_server, username) VALUES (?, ?, ?, ?, ?)',
+                [userId, ign, timezone, preferredServer, username], function(err) {
+                    if (err) reject(err);
+                    else resolve({ id: this.lastID });
+                });
+        });
+    }
+
+    getQueue() {
+        return new Promise((resolve, reject) => {
+            this.db.all(`SELECT q.*, u.username as queue_username FROM queue q JOIN users u ON q.user_id = u.id WHERE q.status = 'pending' ORDER BY q.created_at ASC`, (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows);
+            });
+        });
+    }
+
+    acceptTest(queueId, testerId) {
+        return new Promise((resolve, reject) => {
+            this.db.get('SELECT * FROM queue WHERE id = ? AND status = "pending"', [queueId], (err, queue) => {
+                if (err) reject(err);
+                else if (!queue) reject(new Error('Queue entry not found'));
+                else {
+                    this.db.run('UPDATE queue SET status = "processing" WHERE id = ?', [queueId], (err2) => {
+                        if (err2) reject(err2);
+                        else {
+                            this.db.run('INSERT INTO tests (queue_id, tester_id, testee_id) VALUES (?, ?, ?)',
+                                [queueId, testerId, queue.user_id], function(err3) {
+                                    if (err3) reject(err3);
+                                    else resolve({ id: this.lastID });
+                                });
+                        }
+                    });
+                }
+            });
+        });
+    }
+
+    submitTestResult(testId, testerScore, testeeScore, testerName, testeeName, testeeIgn, server) {
+        return new Promise((resolve, reject) => {
+            this.db.run('UPDATE tests SET tester_score = ?, testee_score = ?, tester_name = ?, testee_name = ?, testee_ign = ?, server = ?, status = "completed", completed_at = CURRENT_TIMESTAMP WHERE id = ?',
+                [testerScore, testeeScore, testerName, testeeName, testeeIgn, server, testId], (err) => {
+                    if (err) reject(err);
+                    else resolve();
+                });
+        });
+    }
+
+    getTickets() {
+        return new Promise((resolve, reject) => {
+            this.db.all(`SELECT t.*, u.username FROM tickets t JOIN users u ON t.user_id = u.id ORDER BY t.created_at DESC`, (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows);
+            });
+        });
+    }
+
+    getForumPosts() {
+        return new Promise((resolve, reject) => {
+            this.db.all(`SELECT p.*, u.username FROM forum_posts p JOIN users u ON p.user_id = u.id ORDER BY p.created_at DESC`, (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows);
+            });
+        });
+    }
+
+    createForumPost(userId, title, content) {
+        return new Promise((resolve, reject) => {
+            this.db.run('INSERT INTO forum_posts (user_id, title, content) VALUES (?, ?, ?)', [userId, title, content], function(err) {
+                if (err) reject(err);
+                else resolve({ id: this.lastID });
+            });
+        });
+    }
+
+    createForumComment(userId, postId, content) {
+        return new Promise((resolve, reject) => {
+            this.db.run('INSERT INTO forum_comments (post_id, user_id, content) VALUES (?, ?, ?)', [postId, userId, content], (err) => {
+                if (err) reject(err);
+                else resolve();
+            });
+        });
+    }
+
+    getAllUsers() {
+        return new Promise((resolve, reject) => {
+            this.db.all(`SELECT u.*, t.* FROM users u LEFT JOIN tiers t ON u.id = t.user_id ORDER BY u.created_at DESC`, (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows);
+            });
+        });
+    }
+
+    getQueueEntryById(queueId) {
+        return new Promise((resolve, reject) => {
+            this.db.get('SELECT * FROM queue WHERE id = ?', [queueId], (err, row) => {
+                if (err) reject(err);
+                else resolve(row);
+            });
+        });
+    }
+
+    deleteQueueEntry(queueId) {
+        return new Promise((resolve, reject) => {
+            this.db.run('DELETE FROM queue WHERE id = ?', [queueId], (err) => {
+                if (err) reject(err);
+                else resolve();
+            });
+        });
+    }
+
+    clearAllQueue() {
+        return new Promise((resolve, reject) => {
+            this.db.run('DELETE FROM queue WHERE status = "pending"', (err) => {
+                if (err) reject(err);
+                else resolve();
+            });
+        });
+    }
+
+    deleteUser(userId) {
+        return new Promise((resolve, reject) => {
+            this.db.run('DELETE FROM users WHERE id = ?', [userId], (err) => {
+                if (err) reject(err);
+                else resolve();
+            });
+        });
+    }
+
+    deleteUserTiers(userId) {
+        return new Promise((resolve, reject) => {
+            this.db.run('DELETE FROM tiers WHERE user_id = ?', [userId], (err) => {
+                if (err) reject(err);
+                else resolve();
+            });
+        });
+    }
+
+    deleteUserQueueEntries(userId) {
+        return new Promise((resolve, reject) => {
+            this.db.run('DELETE FROM queue WHERE user_id = ?', [userId], (err) => {
+                if (err) reject(err);
+                else resolve();
+            });
+        });
+    }
+
+    deleteUserTests(userId) {
+        return new Promise((resolve, reject) => {
+            this.db.run('DELETE FROM tests WHERE tester_id = ? OR testee_id = ?', [userId, userId], (err) => {
+                if (err) reject(err);
+                else resolve();
+            });
+        });
+    }
+
+    deleteUserForumPosts(userId) {
+        return new Promise((resolve, reject) => {
+            this.db.run('DELETE FROM forum_posts WHERE user_id = ?', [userId], (err) => {
+                if (err) reject(err);
+                else resolve();
+            });
+        });
+    }
+
+    deleteUserComments(userId) {
+        return new Promise((resolve, reject) => {
+            this.db.run('DELETE FROM forum_comments WHERE user_id = ?', [userId], (err) => {
+                if (err) reject(err);
+                else resolve();
+            });
+        });
+    }
+
+    deleteUserTickets(userId) {
+        return new Promise((resolve, reject) => {
+            this.db.run('DELETE FROM tickets WHERE user_id = ?', [userId], (err) => {
+                if (err) reject(err);
+                else resolve();
+            });
+        });
+    }
 }
 
 module.exports = Database;
-// Delete user and all associated data
-deleteUser(userId) {
-    return new Promise((resolve, reject) => {
-        this.db.run('DELETE FROM users WHERE id = ?', [userId], (err) => {
-            if (err) reject(err);
-            else resolve();
-        });
-    });
-}
-
-deleteUserTiers(userId) {
-    return new Promise((resolve, reject) => {
-        this.db.run('DELETE FROM tiers WHERE user_id = ?', [userId], (err) => {
-            if (err) reject(err);
-            else resolve();
-        });
-    });
-}
-
-deleteUserQueueEntries(userId) {
-    return new Promise((resolve, reject) => {
-        this.db.run('DELETE FROM queue WHERE user_id = ?', [userId], (err) => {
-            if (err) reject(err);
-            else resolve();
-        });
-    });
-}
-
-deleteUserTests(userId) {
-    return new Promise((resolve, reject) => {
-        this.db.run('DELETE FROM tests WHERE tester_id = ? OR testee_id = ?', [userId, userId], (err) => {
-            if (err) reject(err);
-            else resolve();
-        });
-    });
-}
-
-deleteUserForumPosts(userId) {
-    return new Promise((resolve, reject) => {
-        this.db.run('DELETE FROM forum_posts WHERE user_id = ?', [userId], (err) => {
-            if (err) reject(err);
-            else resolve();
-        });
-    });
-}
-
-deleteUserComments(userId) {
-    return new Promise((resolve, reject) => {
-        this.db.run('DELETE FROM forum_comments WHERE user_id = ?', [userId], (err) => {
-            if (err) reject(err);
-            else resolve();
-        });
-    });
-}
-
-deleteUserTickets(userId) {
-    return new Promise((resolve, reject) => {
-        this.db.run('DELETE FROM tickets WHERE user_id = ?', [userId], (err) => {
-            if (err) reject(err);
-            else resolve();
-        });
-    });
-}
-
-getAllUsers() {
-    return new Promise((resolve, reject) => {
-        this.db.all(`
-            SELECT u.*, t.* 
-            FROM users u 
-            LEFT JOIN tiers t ON u.id = t.user_id 
-            ORDER BY u.created_at DESC
-        `, (err, rows) => {
-            if (err) reject(err);
-            else resolve(rows);
-        });
-    });
-}
-
-getQueueEntryById(queueId) {
-    return new Promise((resolve, reject) => {
-        this.db.get('SELECT * FROM queue WHERE id = ?', [queueId], (err, row) => {
-            if (err) reject(err);
-            else resolve(row);
-        });
-    });
-}
-
-deleteQueueEntry(queueId) {
-    return new Promise((resolve, reject) => {
-        this.db.run('DELETE FROM queue WHERE id = ?', [queueId], (err) => {
-            if (err) reject(err);
-            else resolve();
-        });
-    });
-}
-
-clearAllQueue() {
-    return new Promise((resolve, reject) => {
-        this.db.run('DELETE FROM queue WHERE status = "pending"', (err) => {
-            if (err) reject(err);
-            else resolve();
-        });
-    });
-}
-
-getUserByUsername(username) {
-    return new Promise((resolve, reject) => {
-        this.db.get('SELECT * FROM users WHERE username = ?', [username], (err, row) => {
-            if (err) reject(err);
-            else resolve(row);
-        });
-    });
-}
