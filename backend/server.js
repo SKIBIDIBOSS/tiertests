@@ -281,3 +281,46 @@ async function initialize() {
 }
 
 initialize();
+// Get test details
+app.get('/api/test/details/:testId', async (req, res) => {
+    try {
+        const test = await db.getTestDetails(req.params.testId);
+        res.json(test);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// Get test messages
+app.get('/api/test/messages/:testId', async (req, res) => {
+    try {
+        const messages = await db.getTestMessages(req.params.testId);
+        res.json(messages);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// Send test message
+app.post('/api/test/send-message', async (req, res) => {
+    try {
+        if (!req.session.userId) {
+            return res.status(401).json({ error: 'Not authenticated' });
+        }
+        
+        const { testId, message } = req.body;
+        await db.saveTestMessage(testId, req.session.userId, message);
+        
+        // Broadcast to test room
+        io.to(`test-${testId}`).emit('test-message', {
+            username: req.session.username,
+            message: message,
+            timestamp: new Date()
+        });
+        
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error sending message:', error);
+        res.status(400).json({ error: error.message });
+    }
+});
