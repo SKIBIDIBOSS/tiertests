@@ -1,543 +1,1099 @@
-// ── State ──────────────────────────────────────────────
-let currentUser = null;
-let currentTestId = null;
-let currentGamemode = null;
-let socket = null;
-
-// ── Init ───────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-    checkAuth();
-    loadLandingLeaderboard();
-    initSocket();
-});
-
-function initSocket() {
-    if (typeof io !== 'undefined') {
-        socket = io();
-        socket.on('chat-message', (data) => {
-            appendChatMessage(data.user, data.message, data.user === currentUser?.username);
-        });
-    }
-}
-
-// ── Auth ───────────────────────────────────────────────
-async function checkAuth() {
-    try {
-        const res = await fetch('/api/check-auth');
-        const data = await res.json();
-        if (data.authenticated) {
-            currentUser = { username: data.username, isAdmin: data.isAdmin };
-            updateSidebarAuth();
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MC TierTest | 1.8 Competitive Testing</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #050810;
+            --bg-secondary: #080d1a;
+            --bg-card: #0d1526;
+            --bg-elevated: #111e35;
+            --border: #1e2d52;
+            --border-bright: #2a3f73;
+            --accent: #4f8eff;
+            --accent-glow: rgba(79,142,255,0.3);
+            --gold: #ffd700;
+            --red: #ff4444;
+            --green: #44ff88;
+            --text-primary: #e8eeff;
+            --text-secondary: #8a9dc4;
+            --text-dim: #4a5a7a;
+            --font-display: 'Rajdhani', sans-serif;
+            --font-mono: 'Share Tech Mono', monospace;
+            --font-body: 'Exo 2', sans-serif;
         }
-    } catch (e) {}
-}
 
-function updateSidebarAuth() {
-    if (currentUser) {
-        document.getElementById('sidebarLoggedIn').style.display = 'block';
-        document.getElementById('sidebarLoggedOut').style.display = 'none';
-        document.getElementById('sidebarUsername').textContent = currentUser.username;
-        document.getElementById('sidebarRole').textContent = currentUser.isAdmin ? 'admin' : 'player';
-        document.getElementById('sidebarAvatar').textContent = currentUser.username[0].toUpperCase();
-        if (currentUser.isAdmin) {
-            document.getElementById('adminNavSection').style.display = 'block';
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            min-height: 100vh;
+            display: flex;
         }
-        loadProfileData();
-    } else {
-        document.getElementById('sidebarLoggedIn').style.display = 'none';
-        document.getElementById('sidebarLoggedOut').style.display = 'block';
-        document.getElementById('adminNavSection').style.display = 'none';
-    }
-}
 
-async function doLogin() {
-    const username = document.getElementById('loginUsername').value.trim();
-    const password = document.getElementById('loginPassword').value;
-    const errEl = document.getElementById('loginError');
-    errEl.innerHTML = '';
-    if (!username || !password) { errEl.innerHTML = '<div class="error-msg">Fill in all fields</div>'; return; }
-    try {
-        const res = await fetch('/api/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
-        });
-        const data = await res.json();
-        if (data.success) {
-            currentUser = data.user;
-            updateSidebarAuth();
-            showPage(data.user.isAdmin ? 'admin' : 'gamemodes');
-        } else {
-            errEl.innerHTML = `<div class="error-msg">${data.error}</div>`;
+        /* ── Sidebar ── */
+        .sidebar {
+            width: 240px;
+            min-height: 100vh;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            left: 0; top: 0; bottom: 0;
+            z-index: 100;
         }
-    } catch (e) {
-        errEl.innerHTML = '<div class="error-msg">Login failed</div>';
-    }
-}
 
-async function doSignup() {
-    const username = document.getElementById('signupUsername').value.trim();
-    const ign = document.getElementById('signupIgn').value.trim();
-    const password = document.getElementById('signupPassword').value;
-    const confirm = document.getElementById('signupConfirm').value;
-    const errEl = document.getElementById('signupError');
-    errEl.innerHTML = '';
-    if (!username || !password) { errEl.innerHTML = '<div class="error-msg">Fill in all fields</div>'; return; }
-    if (password !== confirm) { errEl.innerHTML = '<div class="error-msg">Passwords do not match</div>'; return; }
-    if (password.length < 6) { errEl.innerHTML = '<div class="error-msg">Password must be at least 6 characters</div>'; return; }
-    try {
-        const res = await fetch('/api/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password, ign: ign || username })
-        });
-        const data = await res.json();
-        if (data.success) {
-            currentUser = { username: data.user.username, isAdmin: false };
-            updateSidebarAuth();
-            showPage('gamemodes');
-        } else {
-            errEl.innerHTML = `<div class="error-msg">${data.error}</div>`;
+        .sidebar-logo {
+            padding: 24px 20px 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border);
         }
-    } catch (e) {
-        errEl.innerHTML = '<div class="error-msg">Signup failed</div>';
-    }
-}
 
-async function logout() {
-    await fetch('/api/logout', { method: 'POST' });
-    currentUser = null;
-    updateSidebarAuth();
-    showPage('landing');
-}
-
-// ── Navigation ─────────────────────────────────────────
-function showPage(name) {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    const page = document.getElementById('page-' + name);
-    if (page) page.classList.add('active');
-    const nav = document.getElementById('nav-' + name);
-    if (nav) nav.classList.add('active');
-
-    // Load data for page
-    if (name === 'leaderboard') loadLeaderboard('sumo', document.querySelector('#lbTabs .gm-tab'));
-    if (name === 'queue') loadQueue();
-    if (name === 'forum') loadForum();
-    if (name === 'profile') loadProfileData();
-    if (name === 'admin') loadAdminData();
-    if (name === 'landing') loadLandingLeaderboard();
-
-    window.scrollTo(0, 0);
-}
-
-// ── Leaderboard ────────────────────────────────────────
-const RANK_COLORS = {
-    lt5:'#6c6c6c',lt4:'#7a8a9a',lt3:'#4a9eff',lt2:'#9b59ff',lt1:'#ff9b3d',
-    ht5:'#ff5e5e',ht4:'#ff3d9a',ht3:'#ff3dff',ht2:'#ffd700',ht1:'#ff6b00'
-};
-
-async function loadLandingLeaderboard() {
-    try {
-        const res = await fetch('/api/leaderboard');
-        const data = await res.json();
-        const players = data['sumo'] || [];
-        const el = document.getElementById('landingLeaderboard');
-        if (!el) return;
-        if (players.length === 0) {
-            el.innerHTML = '<div class="empty-state"><p>No ranked players yet</p></div>';
-            return;
+        .logo-text {
+            font-family: var(--font-display);
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: 3px;
+            color: var(--text-primary);
+            text-transform: uppercase;
         }
-        el.innerHTML = players.slice(0, 8).map((p, i) => `
-            <div class="lb-row ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">
-                <span class="lb-pos">${i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1)}</span>
-                <span class="lb-name"><div style="width:32px;height:32px;border-radius:4px;background:var(--bg-elevated);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:700;color:var(--accent);font-size:13px;">${p.username[0].toUpperCase()}</div>${p.username}</span>
-                <span class="lb-ign">${p.ign || p.username}</span>
-                <span class="rank-badge" style="color:${RANK_COLORS[p.rank]||'#fff'}">${(p.rank||'UNRATED').toUpperCase()}</span>
-            </div>
-        `).join('');
-    } catch (e) {}
-}
 
-async function loadLeaderboard(gamemode, btn) {
-    if (btn) {
-        document.querySelectorAll('#lbTabs .gm-tab').forEach(t => t.classList.remove('active'));
-        btn.classList.add('active');
-    }
-    try {
-        const res = await fetch('/api/leaderboard');
-        const data = await res.json();
-        const players = data[gamemode] || [];
-        const el = document.getElementById('leaderboardBody');
-        if (players.length === 0) {
-            el.innerHTML = '<div class="empty-state"><span class="empty-icon">👻</span><p>No ranked players in ' + gamemode + ' yet</p></div>';
-            return;
+        .logo-text span { color: var(--accent); }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 16px 12px;
+            overflow-y: auto;
         }
-        el.innerHTML = players.map((p, i) => `
-            <div class="lb-row ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">
-                <span class="lb-pos">${i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1)}</span>
-                <span class="lb-name"><div style="width:36px;height:36px;border-radius:4px;background:var(--bg-elevated);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:700;color:var(--accent);font-size:14px;">${p.username[0].toUpperCase()}</div>${p.username}</span>
-                <span class="lb-ign">${p.ign || p.username}</span>
-                <span class="rank-badge" style="color:${RANK_COLORS[p.rank]||'#fff'}">${(p.rank||'UNRATED').toUpperCase()}</span>
-            </div>
-        `).join('');
-    } catch (e) {}
-}
 
-// ── Queue ──────────────────────────────────────────────
-function openQueueModal(gamemode) {
-    if (!currentUser) { showPage('login'); return; }
-    currentGamemode = gamemode;
-    document.getElementById('queueModalTitle').textContent = 'JOIN ' + gamemode.toUpperCase() + ' QUEUE';
-    document.getElementById('qIgn').value = '';
-    document.getElementById('qTimezone').value = '';
-    document.getElementById('qLeaderboardName').value = currentUser.username;
-    document.getElementById('queueError').innerHTML = '';
-    openModal('queueModal');
-}
+        .nav-section { margin-bottom: 24px; }
 
-async function joinQueue() {
-    const ign = document.getElementById('qIgn').value.trim();
-    const timezone = document.getElementById('qTimezone').value;
-    const preferredServer = document.getElementById('qServer').value;
-    const username = document.getElementById('qLeaderboardName').value.trim();
-    const errEl = document.getElementById('queueError');
-    if (!ign || !timezone) { errEl.innerHTML = '<div class="error-msg">Fill in all required fields</div>'; return; }
-    try {
-        const res = await fetch('/api/join-queue', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ign, timezone, preferredServer, username })
-        });
-        const data = await res.json();
-        if (data.success) {
-            closeModal('queueModal');
-            showPage('queue');
-        } else {
-            errEl.innerHTML = `<div class="error-msg">${data.error}</div>`;
+        .nav-label {
+            display: block;
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            padding: 0 8px;
+            margin-bottom: 6px;
         }
-    } catch (e) {
-        errEl.innerHTML = '<div class="error-msg">Failed to join queue</div>';
-    }
-}
 
-async function loadQueue() {
-    try {
-        const res = await fetch('/api/queue');
-        const queue = await res.json();
-        const el = document.getElementById('queueList');
-        if (queue.length === 0) {
-            el.innerHTML = '<div class="empty-state"><span class="empty-icon">📋</span><p>No players in queue right now</p></div>';
-            return;
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 6px;
+            text-decoration: none;
+            color: var(--text-secondary);
+            font-family: var(--font-display);
+            font-size: 15px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            transition: all 0.15s;
+            margin-bottom: 2px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
         }
-        const isTester = currentUser && (currentUser.isAdmin || currentUser.isTester);
-        el.innerHTML = queue.map(q => `
-            <div class="queue-card">
-                <div class="queue-gm">${(q.gamemode||'QUEUE').toUpperCase()}</div>
-                <div class="queue-info">
-                    <span>👤 <strong>${q.username || q.queue_username}</strong></span>
-                    <span>🎮 IGN: ${q.ign}</span>
-                    <span>🌐 ${q.preferred_server}</span>
-                    <span>🕐 ${q.timezone}</span>
+
+        .nav-item:hover { background: var(--bg-card); color: var(--text-primary); }
+        .nav-item.active { background: rgba(79,142,255,0.15); color: var(--accent); border-left: 2px solid var(--accent); }
+        .nav-item.admin-item:hover { color: var(--gold); }
+        .nav-item.admin-item.active { background: rgba(255,215,0,0.1); color: var(--gold); border-left-color: var(--gold); }
+
+        .nav-icon { font-size: 17px; width: 22px; text-align: center; }
+
+        .sidebar-footer {
+            padding: 16px;
+            border-top: 1px solid var(--border);
+        }
+
+        .sidebar-user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .user-avatar {
+            width: 36px; height: 36px;
+            border-radius: 4px;
+            background: var(--bg-elevated);
+            border: 2px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+            font-family: var(--font-display);
+            font-weight: 700;
+            color: var(--accent);
+            font-size: 15px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+        .sidebar-username {
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        .sidebar-role {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+        }
+
+        /* ── Main Content ── */
+        .main-content {
+            margin-left: 240px;
+            flex: 1;
+            padding: 30px;
+            min-height: 100vh;
+        }
+
+        /* ── Pages ── */
+        .page { display: none; }
+        .page.active { display: block; }
+
+        /* ── Page Header ── */
+        .page-header { margin-bottom: 24px; }
+        .page-title {
+            font-family: var(--font-display);
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--gold);
+        }
+        .page-sub {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--text-dim);
+            margin-top: 4px;
+        }
+
+        /* ── Buttons ── */
+        .btn {
+            padding: 10px 22px;
+            border: none;
+            border-radius: 4px;
+            font-family: var(--font-display);
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+        }
+        .btn-primary { background: var(--accent); color: #fff; box-shadow: 0 0 20px var(--accent-glow); }
+        .btn-primary:hover { background: #6aa3ff; transform: translateY(-1px); }
+        .btn-danger { background: var(--red); color: #fff; }
+        .btn-ghost { background: transparent; border: 1px solid var(--border-bright); color: var(--text-secondary); }
+        .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+        .btn-gold { background: var(--gold); color: #000; }
+        .btn-sm { padding: 6px 14px; font-size: 12px; }
+
+        /* ── Cards ── */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        /* ── Inputs ── */
+        .input {
+            width: 100%;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 10px 14px;
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            font-size: 14px;
+            transition: border-color 0.2s;
+            outline: none;
+        }
+        .input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow); }
+        .input::placeholder { color: var(--text-dim); }
+        select.input { cursor: pointer; }
+
+        .form-group { margin-bottom: 16px; }
+        .form-group label {
+            display: block;
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 6px;
+            font-family: var(--font-mono);
+        }
+
+        /* ── Modal ── */
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal.open { display: flex; }
+
+        .modal-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-bright);
+            border-radius: 12px;
+            padding: 28px;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+            animation: slideUp 0.2s ease;
+            position: relative;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .modal-title {
+            font-family: var(--font-display);
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 16px; right: 16px;
+            background: none;
+            border: none;
+            color: var(--text-dim);
+            font-size: 20px;
+            cursor: pointer;
+            line-height: 1;
+        }
+        .modal-close:hover { color: var(--text-primary); }
+
+        /* ── Landing ── */
+        .landing-hero {
+            text-align: center;
+            padding: 60px 20px 40px;
+            position: relative;
+        }
+
+        .hero-badge {
+            display: inline-block;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            letter-spacing: 4px;
+            color: var(--accent);
+            border: 1px solid var(--accent);
+            padding: 5px 16px;
+            border-radius: 2px;
+            margin-bottom: 28px;
+            background: rgba(79,142,255,0.08);
+        }
+
+        .hero-title {
+            font-family: var(--font-display);
+            font-size: clamp(48px, 8vw, 86px);
+            font-weight: 700;
+            letter-spacing: 8px;
+            line-height: 1;
+            margin-bottom: 24px;
+            text-transform: uppercase;
+        }
+
+        .hero-title .mc { color: var(--text-primary); }
+        .hero-title .tier { color: var(--accent); text-shadow: 0 0 40px rgba(79,142,255,0.6); }
+        .hero-title .test { color: var(--text-secondary); font-size: 0.55em; display: block; letter-spacing: 12px; margin-top: -8px; }
+
+        .hero-sub {
+            font-size: 16px;
+            color: var(--text-secondary);
+            line-height: 1.7;
+            margin-bottom: 40px;
+            font-weight: 300;
+        }
+
+        .hero-btns { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-bottom: 32px; }
+
+        .cta-main {
+            display: flex; align-items: center; gap: 10px;
+            padding: 16px 36px;
+            background: var(--accent); color: #fff;
+            border: none; border-radius: 4px;
+            font-family: var(--font-display);
+            font-size: 18px; font-weight: 700;
+            letter-spacing: 3px; text-transform: uppercase;
+            cursor: pointer; transition: all 0.2s;
+            box-shadow: 0 0 30px rgba(79,142,255,0.4);
+        }
+        .cta-main:hover { transform: translateY(-2px); box-shadow: 0 0 50px rgba(79,142,255,0.6); }
+
+        .cta-secondary {
+            padding: 16px 32px;
+            background: transparent; color: var(--text-secondary);
+            border: 1px solid var(--border-bright); border-radius: 4px;
+            font-family: var(--font-display); font-size: 15px;
+            font-weight: 600; letter-spacing: 2px; text-transform: uppercase;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .cta-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+        .want-join {
+            display: flex; align-items: center; justify-content: center;
+            gap: 10px; font-size: 14px; color: var(--text-dim);
+            font-family: var(--font-mono);
+        }
+
+        .wj-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--green); box-shadow: 0 0 10px var(--green);
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+        }
+
+        .wj-link {
+            background: none; border: none; color: var(--accent);
+            cursor: pointer; font-family: var(--font-mono); font-size: 14px;
+            text-decoration: underline; text-underline-offset: 3px;
+        }
+
+        /* ── Leaderboard ── */
+        .gm-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+
+        .gm-tab {
+            padding: 8px 16px;
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 6px; color: var(--text-secondary);
+            font-family: var(--font-mono); font-size: 12px;
+            letter-spacing: 1px; cursor: pointer; transition: all 0.15s;
+            text-transform: uppercase;
+        }
+        .gm-tab:hover, .gm-tab.active {
+            background: rgba(79,142,255,0.15);
+            border-color: var(--accent); color: var(--accent);
+        }
+
+        .lb-table {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px; overflow: hidden;
+        }
+
+        .lb-thead {
+            display: grid;
+            grid-template-columns: 56px 1.5fr 1fr 120px;
+            padding: 12px 20px;
+            font-family: var(--font-mono); font-size: 10px;
+            text-transform: uppercase; letter-spacing: 2px;
+            color: var(--text-dim);
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .lb-row {
+            display: grid;
+            grid-template-columns: 56px 1.5fr 1fr 120px;
+            align-items: center;
+            padding: 12px 20px;
+            border-bottom: 1px solid rgba(30,45,82,0.5);
+            cursor: pointer; transition: background 0.15s;
+        }
+        .lb-row:hover { background: rgba(79,142,255,0.05); }
+        .lb-row:last-child { border-bottom: none; }
+        .lb-row.gold { background: linear-gradient(90deg, rgba(255,215,0,0.08) 0%, transparent 60%); }
+        .lb-row.silver { background: linear-gradient(90deg, rgba(192,192,192,0.06) 0%, transparent 60%); }
+        .lb-row.bronze { background: linear-gradient(90deg, rgba(205,127,50,0.06) 0%, transparent 60%); }
+
+        .lb-pos { font-family: var(--font-mono); font-size: 14px; color: var(--text-secondary); }
+        .lb-name { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-weight: 600; font-size: 15px; }
+        .lb-ign { font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); }
+
+        .rank-badge {
+            font-family: var(--font-mono); font-size: 13px;
+            font-weight: 700; letter-spacing: 1px;
+        }
+
+        .rank-lt5 { color: #6c6c6c; } .rank-lt4 { color: #7a8a9a; }
+        .rank-lt3 { color: #4a9eff; } .rank-lt2 { color: #9b59ff; }
+        .rank-lt1 { color: #ff9b3d; } .rank-ht5 { color: #ff5e5e; }
+        .rank-ht4 { color: #ff3d9a; } .rank-ht3 { color: #ff3dff; }
+        .rank-ht2 { color: #ffd700; } .rank-ht1 { color: #ff6b00; }
+
+        /* ── Gamemodes Grid ── */
+        .gm-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .gm-card {
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px; padding: 28px 24px;
+            transition: all 0.25s; cursor: default;
+            position: relative; overflow: hidden;
+        }
+        .gm-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.4); }
+
+        .gm-card-icon { font-size: 44px; margin-bottom: 14px; }
+        .gm-card-name {
+            font-family: var(--font-display); font-size: 22px;
+            font-weight: 700; letter-spacing: 3px;
+            margin-bottom: 10px; text-transform: uppercase;
+        }
+        .gm-card-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 20px; }
+
+        .gm-join-btn {
+            width: 100%; padding: 12px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 6px;
+            font-family: var(--font-display); font-size: 14px;
+            font-weight: 600; letter-spacing: 2px;
+            text-transform: uppercase; cursor: pointer; transition: all 0.2s;
+        }
+        .gm-join-btn:hover { opacity: 0.85; }
+
+        /* ── Queue ── */
+        .queue-list { display: flex; flex-direction: column; gap: 12px; }
+
+        .queue-card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 8px; padding: 16px 20px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+
+        .queue-gm {
+            font-family: var(--font-display); font-size: 16px;
+            font-weight: 700; color: var(--accent); min-width: 100px;
+        }
+
+        .queue-info {
+            display: flex; gap: 16px; flex: 1;
+            font-family: var(--font-mono); font-size: 12px;
+            color: var(--text-secondary); flex-wrap: wrap;
+        }
+
+        /* ── Chat ── */
+        .chat-area {
+            display: flex; flex-direction: column;
+            height: calc(100vh - 200px);
+        }
+
+        .chat-messages {
+            flex: 1; overflow-y: auto; padding: 16px;
+            display: flex; flex-direction: column; gap: 10px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border); border-radius: 8px;
+            margin-bottom: 12px;
+        }
+
+        .chat-msg { max-width: 70%; }
+        .chat-msg.own { align-self: flex-end; }
+
+        .chat-bubble {
+            background: var(--bg-elevated); border: 1px solid var(--border);
+            border-radius: 8px; padding: 10px 14px;
+            font-size: 14px; color: var(--text-primary);
+        }
+        .chat-msg.own .chat-bubble { background: rgba(79,142,255,0.15); border-color: rgba(79,142,255,0.3); }
+
+        .chat-sender { font-family: var(--font-mono); font-size: 10px; color: var(--text-dim); margin-bottom: 3px; }
+
+        .chat-input-row { display: flex; gap: 10px; }
+        .chat-input-row .input { flex: 1; }
+
+        /* ── Forum ── */
+        .forum-list { display: flex; flex-direction: column; gap: 8px; }
+
+        .forum-post {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 8px; padding: 16px 20px;
+            cursor: pointer; transition: all 0.15s;
+            display: flex; gap: 14px; align-items: center;
+        }
+        .forum-post:hover { border-color: var(--border-bright); transform: translateX(2px); }
+
+        .post-title { font-family: var(--font-display); font-size: 16px; font-weight: 600; }
+        .post-meta { font-family: var(--font-mono); font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+
+        /* ── Profile ── */
+        .profile-hero {
+            display: flex; align-items: flex-start; gap: 28px;
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 28px; margin-bottom: 24px;
+        }
+
+        .profile-avatar-wrap { position: relative; flex-shrink: 0; }
+
+        .profile-avatar {
+            width: 100px; height: 100px; border-radius: 8px;
+            background: var(--bg-elevated); border: 3px solid var(--border-bright);
+            display: flex; align-items: center; justify-content: center;
+            font-family: var(--font-display); font-size: 40px;
+            font-weight: 700; color: var(--accent); overflow: hidden;
+        }
+        .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+        .profile-username {
+            font-family: var(--font-display); font-size: 28px;
+            font-weight: 700; letter-spacing: 2px;
+        }
+
+        .ranks-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+        }
+
+        .rank-card {
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: 8px; padding: 14px 16px;
+            display: flex; align-items: center; gap: 10px;
+        }
+
+        /* ── Admin ── */
+        .admin-tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 24px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 6px; }
+
+        .admin-tab {
+            padding: 8px 16px; background: transparent; border: none;
+            border-radius: 6px; color: var(--text-secondary);
+            font-family: var(--font-display); font-size: 13px;
+            font-weight: 600; cursor: pointer; transition: all 0.15s;
+        }
+        .admin-tab:hover { color: var(--text-primary); background: var(--bg-card); }
+        .admin-tab.active { background: var(--gold); color: #000; }
+
+        .admin-panel { display: none; }
+        .admin-panel.active { display: block; }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+
+        .stat-card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 10px; padding: 24px; text-align: center;
+        }
+        .stat-icon { font-size: 32px; margin-bottom: 12px; }
+        .stat-value { font-family: var(--font-display); font-size: 40px; font-weight: 700; color: var(--accent); }
+        .stat-label { font-family: var(--font-mono); font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 2px; }
+
+        .admin-table-wrap { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; overflow-x: auto; }
+        .admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .admin-table th { padding: 12px 16px; text-align: left; font-family: var(--font-mono); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: var(--text-dim); background: var(--bg-secondary); border-bottom: 1px solid var(--border); }
+        .admin-table td { padding: 12px 16px; border-bottom: 1px solid rgba(30,45,82,0.4); color: var(--text-primary); vertical-align: middle; }
+        .admin-table tr:last-child td { border-bottom: none; }
+        .admin-table tr:hover td { background: rgba(79,142,255,0.04); }
+
+        /* ── Alerts ── */
+        .error-msg { color: var(--red); font-size: 13px; font-family: var(--font-mono); padding: 10px 14px; background: rgba(255,68,68,0.1); border: 1px solid rgba(255,68,68,0.3); border-radius: 4px; margin-top: 10px; }
+        .success-msg { color: var(--green); font-size: 13px; font-family: var(--font-mono); padding: 10px 14px; background: rgba(68,255,136,0.1); border: 1px solid rgba(68,255,136,0.3); border-radius: 4px; margin-top: 10px; }
+
+        /* ── Auth Pages ── */
+        .auth-page {
+            min-height: 100vh; width: 100%;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .auth-card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 32px; width: 100%; max-width: 420px;
+        }
+
+        .auth-title {
+            font-family: var(--font-display); font-size: 24px;
+            font-weight: 700; letter-spacing: 3px; text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+
+        .auth-sub { color: var(--text-dim); font-size: 13px; font-family: var(--font-mono); margin-bottom: 24px; }
+
+        .auth-switch { margin-top: 20px; text-align: center; font-size: 13px; color: var(--text-dim); font-family: var(--font-mono); }
+        .auth-link { color: var(--accent); cursor: pointer; text-decoration: underline; background: none; border: none; font-family: var(--font-mono); font-size: 13px; }
+
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-secondary); }
+        ::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 3px; }
+
+        /* ── Grid helpers ── */
+        .flex { display: flex; }
+        .flex-between { display: flex; align-items: center; justify-content: space-between; }
+        .gap-2 { gap: 8px; }
+        .gap-3 { gap: 12px; }
+        .mt-2 { margin-top: 8px; }
+        .mt-3 { margin-top: 12px; }
+        .mt-4 { margin-top: 16px; }
+        .w-full { width: 100%; }
+        .mb-4 { margin-bottom: 16px; }
+
+        .empty-state { text-align: center; padding: 60px; color: var(--text-dim); }
+        .empty-state .empty-icon { font-size: 40px; display: block; margin-bottom: 12px; }
+        .empty-state p { font-family: var(--font-mono); font-size: 13px; }
+
+        .section-heading { font-family: var(--font-display); font-size: 14px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 16px; }
+
+        .bg-grid {
+            position: fixed; inset: 0;
+            background-image: linear-gradient(rgba(79,142,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(79,142,255,0.04) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none; z-index: 0;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); transition: transform 0.3s; }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0; padding: 70px 16px 24px; }
+            .gm-grid { grid-template-columns: 1fr 1fr; }
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+            .ranks-grid { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="bg-grid"></div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo" onclick="showPage('landing')">
+        <div class="logo-text">MC<span>TIER</span>TEST</div>
+    </div>
+    <nav class="sidebar-nav">
+        <div class="nav-section">
+            <span class="nav-label">Navigation</span>
+            <button class="nav-item active" id="nav-landing" onclick="showPage('landing')"><span class="nav-icon">🏠</span> Home</button>
+            <button class="nav-item" id="nav-leaderboard" onclick="showPage('leaderboard')"><span class="nav-icon">🏆</span> Leaderboard</button>
+            <button class="nav-item" id="nav-gamemodes" onclick="showPage('gamemodes')"><span class="nav-icon">⚔️</span> Play</button>
+            <button class="nav-item" id="nav-queue" onclick="showPage('queue')"><span class="nav-icon">📋</span> Queue</button>
+            <button class="nav-item" id="nav-forum" onclick="showPage('forum')"><span class="nav-icon">💬</span> Forum</button>
+            <button class="nav-item" id="nav-profile" onclick="showPage('profile')"><span class="nav-icon">👤</span> Profile</button>
+        </div>
+        <div class="nav-section" id="adminNavSection" style="display:none">
+            <span class="nav-label">Admin</span>
+            <button class="nav-item admin-item" id="nav-admin" onclick="showPage('admin')"><span class="nav-icon">⚙️</span> Admin Panel</button>
+        </div>
+    </nav>
+    <div class="sidebar-footer">
+        <div id="sidebarLoggedIn" style="display:none">
+            <div class="sidebar-user-info">
+                <div class="user-avatar" id="sidebarAvatar">?</div>
+                <div>
+                    <div class="sidebar-username" id="sidebarUsername"></div>
+                    <div class="sidebar-role" id="sidebarRole"></div>
                 </div>
-                ${isTester ? `<button class="btn btn-primary btn-sm" onclick="acceptTest('${q.id}')">✓ Accept</button>` : ''}
             </div>
-        `).join('');
-    } catch (e) {}
-}
+            <button class="btn btn-ghost btn-sm w-full" onclick="logout()">Logout</button>
+        </div>
+        <div id="sidebarLoggedOut">
+            <button class="btn btn-primary btn-sm w-full mb-4" onclick="showPage('login')">Login</button>
+            <button class="btn btn-ghost btn-sm w-full" onclick="showPage('signup')">Sign Up</button>
+        </div>
+    </div>
+</aside>
 
-async function acceptTest(queueId) {
-    try {
-        const res = await fetch('/api/accept-test/' + queueId, { method: 'POST' });
-        const data = await res.json();
-        if (data.success) {
-            currentTestId = data.testId;
-            openTestRoom(data.testId);
-        }
-    } catch (e) {}
-}
+<!-- MAIN CONTENT -->
+<main class="main-content">
 
-// ── Test Room ──────────────────────────────────────────
-function openTestRoom(testId) {
-    currentTestId = testId;
-    document.getElementById('chatMessages').innerHTML = '';
-    document.getElementById('testRoomInfo').textContent = 'Test ID: ' + testId;
-    document.getElementById('submitScoreBtn').style.display = currentUser?.isAdmin || currentUser?.isTester ? 'block' : 'none';
-    if (socket) socket.emit('join-test', testId);
-    showPage('testroom');
-}
-
-function sendChat() {
-    const input = document.getElementById('chatInput');
-    const msg = input.value.trim();
-    if (!msg || !socket) return;
-    socket.emit('chat-message', { testId: currentTestId, user: currentUser.username, message: msg });
-    input.value = '';
-}
-
-function appendChatMessage(sender, message, isOwn) {
-    const el = document.getElementById('chatMessages');
-    const div = document.createElement('div');
-    div.className = 'chat-msg' + (isOwn ? ' own' : '');
-    div.innerHTML = `<div class="chat-sender">${sender}</div><div class="chat-bubble">${message}</div>`;
-    el.appendChild(div);
-    el.scrollTop = el.scrollHeight;
-}
-
-function openScoreModal() {
-    document.getElementById('scoreTesterName').value = currentUser?.username || '';
-    openModal('scoreModal');
-}
-
-async function submitScore() {
-    const testerScore = document.getElementById('scoreTester').value;
-    const testeeScore = document.getElementById('scoreTestee').value;
-    const testerName = document.getElementById('scoreTesterName').value;
-    const testeeName = document.getElementById('scoreTesteeName').value;
-    const testeeIgn = document.getElementById('scoreTesteeIgn').value;
-    const server = document.getElementById('scoreServer').value;
-    if (!testerScore || !testeeScore || !testerName || !testeeName) return;
-    try {
-        const res = await fetch('/api/submit-test', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ testId: currentTestId, testerScore, testeeScore, testerName, testeeName, testeeIgn, server })
-        });
-        const data = await res.json();
-        if (data.success) {
-            closeModal('scoreModal');
-            appendChatMessage('SYSTEM', `✅ Test completed! Score: ${testerScore}-${testeeScore}`, false);
-        }
-    } catch (e) {}
-}
-
-// ── Forum ──────────────────────────────────────────────
-async function loadForum() {
-    try {
-        const res = await fetch('/api/forum/posts');
-        const posts = await res.json();
-        const el = document.getElementById('forumList');
-        if (posts.length === 0) {
-            el.innerHTML = '<div class="empty-state"><span class="empty-icon">💬</span><p>No posts yet. Be first!</p></div>';
-            return;
-        }
-        el.innerHTML = posts.map(p => `
-            <div class="forum-post">
-                <div style="width:40px;height:40px;border-radius:4px;background:var(--bg-elevated);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:700;color:var(--accent);font-size:16px;flex-shrink:0;">${(p.username||'?')[0].toUpperCase()}</div>
-                <div style="flex:1">
-                    <div class="post-title">${p.title}</div>
-                    <div class="post-meta">${p.username} · ${new Date(p.created_at).toLocaleDateString()}</div>
-                    <div style="font-size:13px;color:var(--text-secondary);margin-top:4px;">${(p.content||'').substring(0,100)}${p.content?.length>100?'...':''}</div>
-                </div>
+    <!-- ── LANDING ── -->
+    <div class="page active" id="page-landing">
+        <div class="landing-hero">
+            <div class="hero-badge">1.8 MINECRAFT PVP</div>
+            <h1 class="hero-title">
+                <span class="mc">MC</span><span class="tier">TIER</span><span class="test">TEST</span>
+            </h1>
+            <p class="hero-sub">Competitive tier testing for serious 1.8 PvP players.<br>Get ranked. Prove your skill. Climb the ladder.</p>
+            <div class="hero-btns">
+                <button class="cta-main" onclick="showPage('gamemodes')">⚔ GET TESTED NOW</button>
+                <button class="cta-secondary" onclick="showPage('leaderboard')">VIEW LEADERBOARD</button>
             </div>
-        `).join('');
-    } catch (e) {}
-}
+            <div class="want-join">
+                <span class="wj-dot"></span>
+                Want to join?
+                <button class="wj-link" onclick="showPage('signup')">Sign up & get tested now →</button>
+            </div>
+        </div>
 
-async function submitPost() {
-    const title = document.getElementById('postTitle').value.trim();
-    const content = document.getElementById('postContent').value.trim();
-    if (!title || !content) return;
-    try {
-        const res = await fetch('/api/forum/post', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title, content })
-        });
-        const data = await res.json();
-        if (data.success) {
-            closeModal('newPostModal');
-            document.getElementById('postTitle').value = '';
-            document.getElementById('postContent').value = '';
-            loadForum();
-        }
-    } catch (e) {}
-}
+        <!-- Mini leaderboard on landing -->
+        <div style="max-width:900px;margin:0 auto 40px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                <h2 style="font-family:var(--font-display);font-size:20px;font-weight:700;letter-spacing:3px;color:var(--gold);">🏆 LEADERBOARD</h2>
+                <button class="btn btn-ghost btn-sm" onclick="showPage('leaderboard')">View All →</button>
+            </div>
+            <div class="lb-table">
+                <div class="lb-thead"><span>#</span><span>Player</span><span>IGN</span><span>Rank</span></div>
+                <div id="landingLeaderboard"></div>
+            </div>
+        </div>
+    </div>
 
-// ── Profile ────────────────────────────────────────────
-async function loadProfileData() {
-    if (!currentUser) return;
-    try {
-        const res = await fetch('/api/profile/' + currentUser.username);
-        const data = await res.json();
-        document.getElementById('profileUsername').textContent = data.username || currentUser.username;
-        document.getElementById('profileIgn').textContent = data.ign || currentUser.username;
-        document.getElementById('profileRoleBadge').textContent = data.is_admin ? 'admin' : data.is_tester ? 'tester' : 'player';
-        document.getElementById('editIgn').value = data.ign || '';
-
-        if (data.profile_picture) {
-            document.getElementById('profileAvatar').innerHTML = `<img src="${data.profile_picture}" alt="">`;
-        } else {
-            document.getElementById('profileAvatar').textContent = (data.username||'?')[0].toUpperCase();
-        }
-
-        const GAMEMODE_ICONS = { sumo:'⚔️',bedfight:'🛏️',classic:'🗡️',nodebuff:'💊',builduhc:'🏗️',spleef:'❄️' };
-        const gamemodes = ['sumo','bedfight','classic','nodebuff','builduhc','spleef'];
-        const ranksEl = document.getElementById('profileRanks');
-        ranksEl.innerHTML = gamemodes.map(gm => {
-            const rank = data.ranks && data.ranks[gm];
-            return `
-                <div class="rank-card">
-                    <span style="font-size:22px">${GAMEMODE_ICONS[gm]}</span>
-                    <span style="font-family:var(--font-mono);font-size:10px;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;flex:1">${gm.toUpperCase()}</span>
-                    <span style="font-family:var(--font-mono);font-size:14px;font-weight:700;color:${rank?RANK_COLORS[rank]:'var(--text-dim)'}">${rank?rank.toUpperCase():'UNRATED'}</span>
+    <!-- ── LOGIN ── -->
+    <div class="page" id="page-login">
+        <div class="auth-page">
+            <div class="auth-card">
+                <h1 class="auth-title">SIGN IN</h1>
+                <p class="auth-sub">Access your tier testing account</p>
+                <div class="form-group">
+                    <label>Username</label>
+                    <input class="input" type="text" id="loginUsername" placeholder="Enter username">
                 </div>
-            `;
-        }).join('');
-    } catch (e) {}
-}
+                <div class="form-group">
+                    <label>Password</label>
+                    <input class="input" type="password" id="loginPassword" placeholder="Enter password">
+                </div>
+                <div id="loginError"></div>
+                <button class="btn btn-primary w-full mt-4" onclick="doLogin()">LOGIN</button>
+                <div class="auth-switch">Don't have an account? <button class="auth-link" onclick="showPage('signup')">Sign up here</button></div>
+            </div>
+        </div>
+    </div>
 
-function toggleEditProfile() {
-    const el = document.getElementById('editProfileArea');
-    el.style.display = el.style.display === 'none' ? 'block' : 'none';
-}
+    <!-- ── SIGNUP ── -->
+    <div class="page" id="page-signup">
+        <div class="auth-page">
+            <div class="auth-card">
+                <h1 class="auth-title">CREATE ACCOUNT</h1>
+                <p class="auth-sub">Join the competitive testing platform</p>
+                <div class="form-group">
+                    <label>Username</label>
+                    <input class="input" type="text" id="signupUsername" placeholder="Choose a username">
+                </div>
+                <div class="form-group">
+                    <label>Minecraft IGN</label>
+                    <input class="input" type="text" id="signupIgn" placeholder="Your Minecraft username">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input class="input" type="password" id="signupPassword" placeholder="At least 6 characters">
+                </div>
+                <div class="form-group">
+                    <label>Confirm Password</label>
+                    <input class="input" type="password" id="signupConfirm" placeholder="Repeat password">
+                </div>
+                <div id="signupError"></div>
+                <button class="btn btn-primary w-full mt-4" onclick="doSignup()">CREATE ACCOUNT</button>
+                <div class="auth-switch">Already have an account? <button class="auth-link" onclick="showPage('login')">Login here</button></div>
+            </div>
+        </div>
+    </div>
 
-async function saveProfile() {
-    const ign = document.getElementById('editIgn').value.trim();
-    try {
-        const res = await fetch('/api/update-profile', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ign })
-        });
-        const data = await res.json();
-        if (data.success) {
-            document.getElementById('profileIgn').textContent = ign;
-            toggleEditProfile();
-            showMsg('profileMsg', 'Profile updated!', 'success');
-        }
-    } catch (e) {}
-}
+    <!-- ── LEADERBOARD ── -->
+    <div class="page" id="page-leaderboard">
+        <div class="page-header">
+            <h1 class="page-title">🏆 LEADERBOARD</h1>
+            <p class="page-sub">Top ranked players across all gamemodes</p>
+        </div>
+        <div class="gm-tabs" id="lbTabs">
+            <button class="gm-tab active" onclick="loadLeaderboard('sumo',this)">⚔️ SUMO</button>
+            <button class="gm-tab" onclick="loadLeaderboard('bedfight',this)">🛏️ BEDFIGHT</button>
+            <button class="gm-tab" onclick="loadLeaderboard('classic',this)">🗡️ CLASSIC</button>
+            <button class="gm-tab" onclick="loadLeaderboard('nodebuff',this)">💊 NODEBUFF</button>
+            <button class="gm-tab" onclick="loadLeaderboard('builduhc',this)">🏗️ BUILD UHC</button>
+            <button class="gm-tab" onclick="loadLeaderboard('spleef',this)">❄️ SPLEEF</button>
+        </div>
+        <div class="lb-table">
+            <div class="lb-thead"><span>#</span><span>Player</span><span>IGN</span><span>Rank</span></div>
+            <div id="leaderboardBody"></div>
+        </div>
+    </div>
 
-async function uploadAvatar(input) {
-    const file = input.files[0];
-    if (!file) return;
-    const fd = new FormData();
-    fd.append('profilePicture', file);
-    try {
-        const res = await fetch('/api/update-profile', { method: 'POST', body: fd });
-        const data = await res.json();
-        if (data.success) {
-            loadProfileData();
-            showMsg('profileMsg', 'Avatar updated!', 'success');
-        }
-    } catch (e) {}
-}
+    <!-- ── GAMEMODES ── -->
+    <div class="page" id="page-gamemodes">
+        <div class="page-header">
+            <h1 class="page-title">⚔️ CHOOSE GAMEMODE</h1>
+            <p class="page-sub">Select a gamemode to queue for testing</p>
+        </div>
+        <div class="gm-grid">
+            <div class="gm-card" style="background:linear-gradient(135deg,#0a1628,#0d2044)">
+                <div class="gm-card-icon">⚔️</div>
+                <div class="gm-card-name" style="color:#4a9eff">SUMO</div>
+                <div class="gm-card-desc">Fight on platforms over the void. Last one standing wins.</div>
+                <button class="gm-join-btn" style="border:1px solid #4a9eff;color:#4a9eff" onclick="openQueueModal('sumo')">Join Queue</button>
+            </div>
+            <div class="gm-card" style="background:linear-gradient(135deg,#1a0828,#2a0d3c)">
+                <div class="gm-card-icon">🛏️</div>
+                <div class="gm-card-name" style="color:#ff3d9a">BEDFIGHT</div>
+                <div class="gm-card-desc">Destroy beds and eliminate opponents in strategic combat.</div>
+                <button class="gm-join-btn" style="border:1px solid #ff3d9a;color:#ff3d9a" onclick="openQueueModal('bedfight')">Join Queue</button>
+            </div>
+            <div class="gm-card" style="background:linear-gradient(135deg,#1a0e04,#2a1800)">
+                <div class="gm-card-icon">🗡️</div>
+                <div class="gm-card-name" style="color:#ff9b3d">CLASSIC</div>
+                <div class="gm-card-desc">Traditional 1.8 PvP mechanics. Pure sword skill.</div>
+                <button class="gm-join-btn" style="border:1px solid #ff9b3d;color:#ff9b3d" onclick="openQueueModal('classic')">Join Queue</button>
+            </div>
+            <div class="gm-card" style="background:linear-gradient(135deg,#04180a,#082e14)">
+                <div class="gm-card-icon">💊</div>
+                <div class="gm-card-name" style="color:#44ff88">NODEBUFF</div>
+                <div class="gm-card-desc">No potions. High-ceiling skill-based combat.</div>
+                <button class="gm-join-btn" style="border:1px solid #44ff88;color:#44ff88" onclick="openQueueModal('nodebuff')">Join Queue</button>
+            </div>
+            <div class="gm-card" style="background:linear-gradient(135deg,#18140a,#28200a)">
+                <div class="gm-card-icon">🏗️</div>
+                <div class="gm-card-name" style="color:#ffd700">BUILD UHC</div>
+                <div class="gm-card-desc">Build and fight. Combine construction with PvP.</div>
+                <button class="gm-join-btn" style="border:1px solid #ffd700;color:#ffd700" onclick="openQueueModal('builduhc')">Join Queue</button>
+            </div>
+            <div class="gm-card" style="background:linear-gradient(135deg,#081422,#0c2040)">
+                <div class="gm-card-icon">❄️</div>
+                <div class="gm-card-name" style="color:#7dd4ff">SPLEEF</div>
+                <div class="gm-card-desc">Destroy the floor beneath opponents. Tactical movement.</div>
+                <button class="gm-join-btn" style="border:1px solid #7dd4ff;color:#7dd4ff" onclick="openQueueModal('spleef')">Join Queue</button>
+            </div>
+        </div>
+    </div>
 
-async function changePassword() {
-    const current = document.getElementById('pwCurrent').value;
-    const next = document.getElementById('pwNew').value;
-    const confirm = document.getElementById('pwConfirm').value;
-    if (next !== confirm) { showMsg('pwMsg', 'Passwords do not match', 'error'); return; }
-    if (next.length < 6) { showMsg('pwMsg', 'Min 6 characters', 'error'); return; }
-    try {
-        const res = await fetch('/api/change-password', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ currentPassword: current, newPassword: next })
-        });
-        const data = await res.json();
-        if (data.success) {
-            showMsg('pwMsg', 'Password changed!', 'success');
-            document.getElementById('pwCurrent').value = '';
-            document.getElementById('pwNew').value = '';
-            document.getElementById('pwConfirm').value = '';
-        } else {
-            showMsg('pwMsg', data.error || 'Failed', 'error');
-        }
-    } catch (e) {}
-}
+    <!-- ── QUEUE ── -->
+    <div class="page" id="page-queue">
+        <div class="flex-between mb-4">
+            <div class="page-header" style="margin:0">
+                <h1 class="page-title">📋 QUEUE</h1>
+                <p class="page-sub">Active testing queue</p>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="loadQueue()">↻ Refresh</button>
+        </div>
+        <div id="queueList" class="queue-list"></div>
+    </div>
 
-// ── Admin ──────────────────────────────────────────────
-async function loadAdminData() {
-    if (!currentUser?.isAdmin) return;
-    try {
-        const [qRes, tRes] = await Promise.all([
-            fetch('/api/queue'),
-            fetch('/api/admin/tickets')
-        ]);
-        const queue = await qRes.json();
-        const tickets = await tRes.json();
+    <!-- ── TEST ROOM ── -->
+    <div class="page" id="page-testroom">
+        <div class="flex-between mb-4">
+            <div>
+                <h1 class="page-title">⚔️ TEST ROOM</h1>
+                <p class="page-sub" id="testRoomInfo"></p>
+            </div>
+            <button class="btn btn-gold btn-sm" id="submitScoreBtn" onclick="openScoreModal()" style="display:none">Submit Score</button>
+        </div>
+        <div class="chat-area">
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-input-row">
+                <input class="input" id="chatInput" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendChat()">
+                <button class="btn btn-primary" onclick="sendChat()">Send</button>
+            </div>
+        </div>
+    </div>
 
-        document.getElementById('adminStats').innerHTML = `
-            <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-value">${queue.length}</div><div class="stat-label">In Queue</div></div>
-            <div class="stat-card"><div class="stat-icon">🎫</div><div class="stat-value">${tickets.length}</div><div class="stat-label">Tickets</div></div>
-            <div class="stat-card"><div class="stat-icon">⚔️</div><div class="stat-value">-</div><div class="stat-label">Active Tests</div></div>
-        `;
+    <!-- ── FORUM ── -->
+    <div class="page" id="page-forum">
+        <div class="flex-between mb-4">
+            <div class="page-header" style="margin:0">
+                <h1 class="page-title">💬 FORUM</h1>
+                <p class="page-sub">Community discussion</p>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="openModal('newPostModal')">+ New Post</button>
+        </div>
+        <div id="forumList" class="forum-list"></div>
+    </div>
 
-        document.getElementById('adminTicketsTable').innerHTML = tickets.map(t => `
-            <tr>
-                <td style="font-family:var(--font-mono);font-size:12px">${t.username}</td>
-                <td>${t.subject}</td>
-                <td style="font-family:var(--font-mono);font-size:11px;color:${t.status==='open'?'#ffd700':'#6c6c6c'}">${t.status}</td>
-                <td style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim)">${new Date(t.created_at).toLocaleDateString()}</td>
-            </tr>
-        `).join('');
+    <!-- ── PROFILE ── -->
+    <div class="page" id="page-profile">
+        <div class="profile-hero">
+            <div class="profile-avatar-wrap">
+                <div class="profile-avatar" id="profileAvatar">?</div>
+                <label style="position:absolute;bottom:-8px;right:-8px;width:30px;height:30px;background:var(--bg-card);border:1px solid var(--border-bright);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;" title="Change avatar">
+                    📷<input type="file" accept="image/*" style="display:none" onchange="uploadAvatar(this)">
+                </label>
+            </div>
+            <div style="flex:1">
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
+                    <h1 class="profile-username" id="profileUsername"></h1>
+                    <button class="btn btn-ghost btn-sm" onclick="toggleEditProfile()">Edit</button>
+                </div>
+                <div id="editProfileArea" style="display:none;margin-bottom:10px;">
+                    <div style="display:flex;gap:8px;">
+                        <input class="input" id="editIgn" placeholder="Minecraft IGN" style="max-width:200px;">
+                        <button class="btn btn-primary btn-sm" onclick="saveProfile()">Save</button>
+                        <button class="btn btn-ghost btn-sm" onclick="toggleEditProfile()">Cancel</button>
+                    </div>
+                </div>
+                <div style="font-family:var(--font-mono);font-size:13px;color:var(--text-secondary);margin-bottom:8px;">IGN: <strong id="profileIgn"></strong></div>
+                <div id="profileRoleBadge" style="display:inline-block;font-family:var(--font-mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;padding:3px 10px;border-radius:3px;background:rgba(79,142,255,0.12);border:1px solid var(--accent);color:var(--accent);"></div>
+                <div id="profileMsg"></div>
+            </div>
+        </div>
 
-        document.getElementById('adminQueueTable').innerHTML = queue.map(q => `
-            <tr>
-                <td style="font-family:var(--font-display);font-weight:600">${q.username||q.queue_username}</td>
-                <td style="font-family:var(--font-mono);font-size:12px">${q.ign}</td>
-                <td style="font-family:var(--font-mono);font-size:12px">${q.preferred_server}</td>
-                <td style="font-family:var(--font-mono);font-size:11px;color:#ffd700">${q.status}</td>
-                <td><button class="btn btn-primary btn-sm" onclick="acceptTest('${q.id}')">Accept</button></td>
-            </tr>
-        `).join('');
-    } catch (e) {}
-}
+        <div class="card mb-4">
+            <h2 class="section-heading">RANKS</h2>
+            <div class="ranks-grid" id="profileRanks"></div>
+        </div>
 
-function switchAdminTab(name, btn) {
-    document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.admin-panel').forEach(p => p.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById('ap-' + name).classList.add('active');
-}
+        <div class="card">
+            <h2 class="section-heading">CHANGE PASSWORD</h2>
+            <div style="max-width:400px;">
+                <div class="form-group">
+                    <label>Current Password</label>
+                    <input class="input" type="password" id="pwCurrent" placeholder="Current password">
+                </div>
+                <div class="form-group">
+                    <label>New Password</label>
+                    <input class="input" type="password" id="pwNew" placeholder="New password">
+                </div>
+                <div class="form-group">
+                    <label>Confirm New Password</label>
+                    <input class="input" type="password" id="pwConfirm" placeholder="Repeat new password">
+                </div>
+                <div id="pwMsg"></div>
+                <button class="btn btn-primary mt-3" onclick="changePassword()">CHANGE PASSWORD</button>
+            </div>
+        </div>
+    </div>
 
-async function addTester() {
-    const username = document.getElementById('newTesterUsername').value.trim();
-    const password = document.getElementById('newTesterPassword').value;
-    const ign = document.getElementById('newTesterIgn').value.trim();
-    const msgEl = document.getElementById('addTesterMsg');
-    if (!username || !password) { msgEl.innerHTML = '<div class="error-msg">Username and password required</div>'; return; }
-    try {
-        const res = await fetch('/api/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password, ign: ign || username })
-        });
-        const data = await res.json();
-        if (data.success) {
-            await fetch('/api/admin/add-tester', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: data.user.id })
-            });
-            msgEl.innerHTML = '<div class="success-msg">Tester added!</div>';
-            document.getElementById('newTesterUsername').value = '';
-            document.getElementById('newTesterPassword').value = '';
-            document.getElementById('newTesterIgn').value = '';
-        } else {
-            msgEl.innerHTML = `<div class="error-msg">${data.error}</div>`;
-        }
-    } catch (e) {
-        msgEl.innerHTML = '<div class="error-msg">Failed to add tester</div>';
-    }
-}
+    <!-- ── ADMIN ── -->
+    <div class="page" id="page-admin">
+        <div class="page-header">
+            <h1 class="page-title">⚙️ ADMIN PANEL</h1>
+        </div>
+        <div class="admin-tabs">
+            <button class="admin-tab active" onclick="switchAdminTab('overview',this)">📊 Overview</button>
+            <button class="admin-tab" onclick="switchAdminTab('users',this)">👥 Users</button>
+            <button class="admin-tab" onclick="switchAdminTab('addtester',this)">➕ Add Tester</button>
+            <button class="admin-tab" onclick="switchAdminTab('tickets',this)">🎫 Tickets</button>
+            <button class="admin-tab" onclick="switchAdminTab('queueadmin',this)">📋 Queue</button>
+        </div>
 
-// ── Modal Helpers ──────────────────────────────────────
-function openModal(id) { document.getElementById(id).classList.add('open'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+        <div class="admin-panel active" id="ap-overview">
+            <div class="stats-grid" id="adminStats"></div>
+        </div>
 
-document.addEventListener('click', (e) => {
-    if (e.target.classList.contains('modal')) {
-        e.target.classList.remove('open');
-    }
-});
+        <div class="admin-panel" id="ap-users">
+            <div class="admin-table-wrap">
+                <table class="admin-table">
+                    <thead><tr><th>User</th><th>IGN</th><th>Role</th><th>Sumo</th><th>Bedfight</th><th>Classic</th><th>Actions</th></tr></thead>
+                    <tbody id="adminUsersTable"></tbody>
+                </table>
+            </div>
+        </div>
 
-// ── Message Helper ─────────────────────────────────────
-function showMsg(elId, msg, type) {
-    const el = document.getElementById(elId);
-    if (!el) return;
-    el.innerHTML = `<div class="${type}-msg">${msg}</div>`;
-    setTimeout(() => { el.innerHTML = ''; }, 3000);
-}
+        <div class="admin-panel" id="ap-addtester">
+            <div class="card" style="max-width:600px;">
+                <h3 class="section-heading">ADD NEW TESTER</h3>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div class="form-group"><label>Username</label><input class="input" id="newTesterUsername" placeholder="Login username"></div>
+                    <div class="form-group"><label>Password</label><input class="input" type="password" id="newTesterPassword" placeholder="Password"></div>
+                </div>
+                <div class="form-group"><label>IGN</label><input class="input" id="newTesterIgn" placeholder="Minecraft IGN"></div>
+                <div id="addTesterMsg"></div>
+                <button class="btn btn-primary mt-3" onclick="addTester()">ADD TESTER</button>
+            </div>
+        </div>
+
+        <div class="admin-panel" id="ap-tickets">
+            <div class="admin-table-wrap">
+                <table class="admin-table">
+                    <thead><tr><th>User</th><th>Subject</th><th>Status</th><th>Date</th></tr></thead>
+                    <tbody id="adminTicketsTable"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="admin-panel" id="ap-queueadmin">
+            <div class="admin-table-wrap">
+                <table class="admin-table">
+                    <thead><tr><th>Player</th><th>IGN</th><th>Server</th><th>Status</th><th>Actions</th></tr></thead>
+                    <tbody id="adminQueueTable"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</main>
+
+<!-- ── MODALS ── -->
+
+<!-- Queue Join Modal -->
+<div class="modal" id="queueModal">
+    <div class="modal-box">
+        <button class="modal-close" onclick="closeModal('queueModal')">×</button>
+        <div class="modal-title" id="queueModalTitle">JOIN QUEUE</div>
+        <div class="form-group"><label>Minecraft IGN *</label><input class="input" id="qIgn" placeholder="Your Minecraft username"></div>
+        <div class="form-group"><label>Timezone *</label>
+            <select class="input" id="qTimezone">
+                <option value="">Select timezone...</option>
+                <option>GMT-8 (PST)</option><option>GMT-5 (EST)</option>
+                <option>GMT+0 (GMT)</option><option>GMT+1 (CET)</option>
+                <option>GMT+3 (EET)</option><option>GMT+8 (CST)</option>
+                <option>GMT+9 (JST)</option><option>GMT+10 (AEST)</option>
+            </select>
+        </div>
+        <div class="form-group"><label>Preferred Server</label>
+            <select class="input" id="qServer">
+                <option value="EU">EU</option><option value="NA">NA</option>
+                <option value="AS">AS</option><option value="AU">AU</option>
+            </select>
+        </div>
+        <div class="form-group"><label>Leaderboard Display Name</label><input class="input" id="qLeaderboardName" placeholder="Name shown on leaderboard"></div>
+        <div id="queueError"></div>
+        <div class="flex gap-3 mt-4">
+            <button class="btn btn-ghost" style="flex:1" onclick="closeModal('queueModal')">Cancel</button>
+            <button class="btn btn-primary" style="flex:2" onclick="joinQueue()">JOIN QUEUE</button>
+        </div>
+    </div>
+</div>
+
+<!-- Score Modal -->
+<div class="modal" id="scoreModal">
+    <div class="modal-box">
+        <button class="modal-close" onclick="closeModal('scoreModal')">×</button>
+        <div class="modal-title">SUBMIT SCORE</div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+            <div class="form-group" style="flex:1;margin:0"><label>Your Score (Tester)</label><input class="input" type="number" id="scoreTester" placeholder="e.g. 3" min="0"></div>
+            <div style="font-size:24px;color:var(--text-dim);padding-top:20px;">—</div>
+            <div class="form-group" style="flex:1;margin:0"><label>Testee Score</label><input class="input" type="number" id="scoreTestee" placeholder="e.g. 1" min="0"></div>
+        </div>
+        <div class="form-group"><label>Tester Name</label><input class="input" id="scoreTesterName" placeholder="Your username"></div>
+        <div class="form-group"><label>Testee Name</label><input class="input" id="scoreTesteeName" placeholder="Testee username"></div>
+        <div class="form-group"><label>Testee IGN</label><input class="input" id="scoreTesteeIgn" placeholder="Testee Minecraft IGN"></div>
+        <div class="form-group"><label>Server Tested On</label>
+            <select class="input" id="scoreServer">
+                <option value="EU">EU</option><option value="NA">NA</option>
+                <option value="AS">AS</option><option value="AU">AU</option>
+            </select>
+        </div>
+        <div class="flex gap-3 mt-4">
+            <button class="btn btn-ghost" style="flex:1" onclick="closeModal('scoreModal')">Cancel</button>
+            <button class="btn btn-gold" style="flex:2" onclick="submitScore()">SUBMIT & RANK</button>
+        </div>
+    </div>
+</div>
+
+<!-- New Post Modal -->
+<div class="modal" id="newPostModal">
+    <div class="modal-box" style="max-width:600px">
+        <button class="modal-close" onclick="closeModal('newPostModal')">×</button>
+        <div class="modal-title">NEW POST</div>
+        <div class="form-group"><label>Title</label><input class="input" id="postTitle" placeholder="Post title..."></div>
+        <div class="form-group"><label>Content</label><textarea class="input" id="postContent" rows="6" style="resize:vertical" placeholder="Write your post..."></textarea></div>
+        <div class="flex gap-3 mt-4">
+            <button class="btn btn-ghost" style="flex:1" onclick="closeModal('newPostModal')">Cancel</button>
+            <button class="btn btn-primary" style="flex:2" onclick="submitPost()">POST</button>
+        </div>
+    </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
