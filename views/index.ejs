@@ -1,59 +1,37 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>SKIBIDIBOSS X LINING | HUB</title>
+    <title>SKIBIDIBOSS X LINING</title>
     <style>
-        :root { --bg: #090a0b; --sidebar: #111214; --accent: #00d1ff; --card: #18191c; --text: #ffffff; }
-        body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; display: grid; grid-template-columns: 260px 1fr 300px; height: 100vh; overflow: hidden; }
-        nav { background: var(--sidebar); padding: 30px 20px; display: flex; flex-direction: column; border-right: 1px solid #222; }
-        .logo { font-size: 0.9rem; font-weight: 900; color: var(--accent); margin-bottom: 40px; text-transform: uppercase; letter-spacing: 2px; }
-        .nav-link { padding: 12px; color: #8e9297; text-decoration: none; font-weight: 600; border-radius: 8px; margin-bottom: 5px; }
-        .nav-link:hover { background: #222; color: #fff; }
-        main { padding: 40px; overflow-y: auto; }
-        .glow-h1 { font-size: 3rem; margin: 0; text-shadow: 0 0 20px rgba(0,209,255,0.4); text-transform: uppercase; }
-        table { width: 100%; background: var(--card); border-radius: 12px; border-collapse: collapse; margin-top: 20px; }
-        th, td { text-align: left; padding: 15px; border-bottom: 1px solid #222; }
-        .tier-badge { border: 1px solid var(--accent); padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
-        aside { background: var(--sidebar); border-left: 1px solid #222; display: flex; flex-direction: column; }
-        .chat-msgs { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
-        .msg { font-size: 0.85rem; padding: 5px; border-radius: 4px; }
-        .msg b { color: var(--accent); }
-        .msg.admin b { color: #ff4757; }
-        .chat-form { padding: 15px; border-top: 1px solid #222; }
-        .chat-input { width: 100%; padding: 10px; background: #000; border: 1px solid #333; color: #fff; border-radius: 5px; box-sizing: border-box; }
+        body { background: #0b0c0e; color: white; font-family: sans-serif; margin: 0; display: flex; }
+        .sidebar { width: 250px; background: #121417; height: 100vh; padding: 20px; border-right: 1px solid #222; }
+        .content { flex: 1; padding: 50px; }
+        .tier-card { background: #1c1e22; padding: 20px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; }
+        .btn-test { background: #00d1ff; color: black; padding: 15px; border-radius: 8px; text-decoration: none; font-weight: bold; }
     </style>
 </head>
 <body>
-    <nav>
-        <div class="logo">SKIBIDIBOSS X LINING</div>
-        <a href="/" class="nav-link">Leaderboard</a>
-        <% if (user && user.role === 'admin') { %><a href="/admin" class="nav-link" style="color: #ff4757;">Admin Terminal</a><% } %>
-        <% if (user) { %><a href="/logout" class="nav-link" style="margin-top:20px;">Logout</a>
-        <% } else { %><a href="/login" class="nav-link" style="margin-top:20px;">Staff Access</a><% } %>
-        <div style="margin-top: auto; background: var(--accent); color: #000; padding: 15px; border-radius: 10px; text-align: center; font-weight: 800; cursor: pointer;">GET TESTED</div>
-    </nav>
-    <main>
-        <h1 class="glow-h1">Lining Tiers</h1>
-        <table>
-            <thead><tr><th>OPERATIVE</th><th>RANKING</th></tr></thead>
-            <tbody>
-                <% users.forEach(p => { %>
-                    <tr><td><b><%= p.username %></b></td><td><span class="tier-badge"><%= p.tier %></span></td></tr>
-                <% }) %>
-            </tbody>
-        </table>
-    </main>
-    <aside>
-        <div style="padding: 20px; font-weight: bold; border-bottom: 1px solid #222;">FORUM CHAT</div>
-        <div class="chat-msgs">
-            <% chat.forEach(m => { %><div class="msg <%= m.role %>"><b><%= m.username %>:</b> <%= m.text %></div><% }) %>
-        </div>
-        <% if (user) { %>
-            <form action="/chat/send" method="POST" class="chat-form">
-                <input type="text" name="text" class="chat-input" placeholder="Message forum..." required>
-            </form>
+    <div class="sidebar">
+        <h2>SKIBIDIBOSS X</h2>
+        <a href="/" style="color:white; display:block; margin: 10px 0;">Leaderboard</a>
+        <a href="/queue" style="color:white; display:block; margin: 10px 0;">Join Queue</a>
+        <% if (user && user.role === 'admin') { %>
+            <a href="/admin" style="color:red; display:block; margin: 10px 0;">Admin Panel</a>
         <% } %>
-    </aside>
+    </div>
+    <div class="content">
+        <h1>Leaderboard</h1>
+        <div class="leaderboard">
+            <% players.forEach(player => { %>
+                <div class="tier-card">
+                    <span><img src="<%= player.pfp %>" width="30"> <b><%= player.username %></b> (<%= player.ign %>)</span>
+                    <span>Sumo: <%= player.ranks.sumo %> | Bedfight: <%= player.ranks.bedfight %></span>
+                </div>
+            <% }) %>
+        </div>
+        <br><br>
+        <h3>Want to join? Get tested now</h3>
+        <a href="/queue" class="btn-test">GET TESTED NOW</a>
+    </div>
 </body>
 </html>
