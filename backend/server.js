@@ -1,126 +1,68 @@
-// Get all users (admin only)
-app.get('/api/users', async (req, res) => {
-    try {
-        if (!req.session.isAdmin) return res.status(403).json({ error: 'Not authorized' });
-        const users = await db.getAllUsers();
-        res.json(users);
-    } catch (error) {
-        res.status(400).json({ error: error.message });
-    }
+const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
+const mongoose = require('mongoose');
+const path = require('path');
+require('dotenv').config();
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
+
+// Middleware
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+app.set('view engine', 'ejs');
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Database Schema
+const userSchema = new mongoose.Schema({
+    username: String,
+    role: { type: String, default: 'user' }, // admin, tester, user
+    tier: { type: String, default: 'Unranked' },
+    isBanned: { type: Boolean, default: false },
+    wins: { type: Number, default: 0 }
+});
+const User = mongoose.model('User', userSchema);
+
+// ROUTES
+// 1. Leaderboard (Home)
+app.get('/', async (req, res) => {
+    const users = await User.find({ isBanned: false }).sort({ tier: 1, wins: -1 });
+    res.render('index', { users });
 });
 
-// Ban/delete user (admin only)
-app.post('/api/ban-user/:userId', async (req, res) => {
-    try {
-        if (!req.session.isAdmin) return res.status(403).json({ error: 'Not authorized' });
-        await db.deleteUser(req.params.userId);
-        await db.deleteUserTiers(req.params.userId);
-        await db.deleteUserQueueEntries(req.params.userId);
-        await db.deleteUserTests(req.params.userId);
-        await db.deleteUserForumPosts(req.params.userId);
-        await db.deleteUserComments(req.params.userId);
-        await db.deleteUserTickets(req.params.userId);
-        res.json({ success: true });
-    } catch (error) {
-        res.status(400).json({ error: error.message });
-    }
+// 2. Admin Panel
+app.get('/admin', async (req, res) => {
+    const users = await User.find();
+    res.render('admin', { users });
 });
 
-// Get user profile
-app.get('/api/user/:userId', async (req, res) => {
-    try {
-        const user = await db.getUserById(req.params.userId);
-        const profile = await db.getUserProfile(user.username);
-        res.json(profile);
-    } catch (error) {
-        res.status(400).json({ error: error.message });
-    }
+// 3. Admin Actions (Ban/Tier/Delete)
+app.post('/admin/action', async (req, res) => {
+    const { userId, action, tier } = req.body;
+    if (action === 'ban') await User.findByIdAndUpdate(userId, { isBanned: true });
+    if (action === 'delete') await User.findByIdAndDelete(userId);
+    if (action === 'updateTier') await User.findByIdAndUpdate(userId, { tier: tier });
+    res.redirect('/admin');
 });
 
-// Update user tiers (admin only)
-app.post('/api/admin/update-user-tiers/:userId', async (req, res) => {
-    try {
-        if (!req.session.isAdmin) return res.status(403).json({ error: 'Not authorized' });
-        const { sumo, bedfight, classic, skywars, boxing } = req.body;
-        await db.updateUserTiers(req.params.userId, sumo, bedfight, classic, skywars, boxing);
-        res.json({ success: true });
-    } catch (error) {
-        res.status(400).json({ error: error.message });
-    }
+// 4. Ticket System (Simple Chat Room)
+app.get('/ticket/:id', async (req, res) => {
+    const player = await User.findById(req.params.id);
+    res.render('ticket', { player });
 });
 
-// Ticket endpoints
-app.post('/api/tickets', async (req, res) => {
-    try {
-        if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
-        const { subject, message } = req.body;
-        const ticket = await db.createTicket(req.session.userId, subject, message);
-        res.json({ success: true, ticketId: ticket.id });
-    } catch (error) {
-        res.status(400).json({ error: error.message });
-    }
+// Real-time Socket.io Chat
+io.on('connection', (socket) => {
+    socket.on('joinRoom', (room) => socket.join(room));
+    socket.on('chatMessage', (data) => {
+        io.to(data.room).emit('message', data);
+    });
 });
 
-app.get('/api/tickets', async (req, res) => {
-    try {
-        if (!req.session.isAdmin) return res.status(403).json({ error: 'Not authorized' });
-        const tickets = await db.getTickets();
-        res.json(tickets);
-    } catch (error) {
-        res.status(400).json({ error: error.message });
-    }
-});
-
-app.get('/api/tickets/:ticketId', async (req, res) => {
-    try {
-        const ticket = await db.getTicketById(req.params.ticketId);
-        if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
-        res.json(ticket);
-    } catch (error) {
-        res.status(400).json({ error: error.message });
-    }
-});
-
-app.post('/api/tickets/:ticketId/message', async (req, res) => {
-    try {
-        if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
-        const { message } = req.body;
-        await db.saveTicketMessage(req.params.ticketId, req.session.userId, message);
-        
-        const io = req.app.get('io');
-        const user = await db.getUserById(req.session.userId);
-        io.to('ticket-' + req.params.ticketId).emit('ticket-message', {
-            username: req.session.username,
-            message: message,
-            isAdmin: req.session.isAdmin,
-            isTester: await db.isTester(req.session.userId),
-            timestamp: new Date()
-        });
-        
-        res.json({ success: true });
-    } catch (error) {
-        res.status(400).json({ error: error.message });
-    }
-});
-
-app.get('/api/tickets/:ticketId/messages', async (req, res) => {
-    try {
-        const messages = await db.getTicketMessages(req.params.ticketId);
-        res.json(messages);
-    } catch (error) {
-        res.status(400).json({ error: error.message });
-    }
-});
-
-app.post('/api/tickets/:ticketId/close', async (req, res) => {
-    try {
-        if (!req.session.isAdmin) return res.status(403).json({ error: 'Not authorized' });
-        const { sumo, bedfight, classic, skywars, boxing } = req.body;
-        const ticket = await db.getTicketById(req.params.ticketId);
-        await db.updateUserTiers(ticket.user_id, sumo, bedfight, classic, skywars, boxing);
-        await db.closeTicket(req.params.ticketId);
-        res.json({ success: true });
-    } catch (error) {
-        res.status(400).json({ error: error.message });
-    }
+// Start Server
+const PORT = process.env.PORT || 3000;
+mongoose.connect(process.env.MONGODB_URI).then(() => {
+    server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 });
