@@ -1,12 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/css/style.css">
+    <title>Tier Leaderboard</title>
+</head>
 <body>
-    <h1>Tier Leaderboard</h1>
-    <div style="display: flex; flex-direction: column; gap: 10px;">
-        <% users.forEach(user => { %>
-            <div style="background:#2f3136; padding: 10px;">
-                <strong class="txt-<%= user.role %>"><%= user.username %></strong> 
-                - Tier: <%= user.tier %>
-                <a href="/ticket/<%= user._id %>">Open Ticket</a>
+    <div class="container">
+        <header>
+            <h1>Tier Leaderboard</h1>
+            <p>Official Player Rankings</p>
+        </header>
+
+        <div class="leaderboard-card">
+            <div class="list-header">
+                <span>Player</span>
+                <span>Tier</span>
+                <span>Action</span>
             </div>
-        <% }) %>
+
+            <div class="user-list">
+                <% if (users.length > 0) { %>
+                    <% users.forEach(user => { %>
+                        <div class="user-row">
+                            <div class="user-info">
+                                <span class="username role-<%= user.role.toLowerCase() %>">
+                                    <%= user.username %>
+                                </span>
+                            </div>
+                            
+                            <div class="user-tier">
+                                <span class="tier-badge"><%= user.tier %></span>
+                            </div>
+
+                            <div class="user-action">
+                                <a href="/ticket/<%= user._id %>" class="btn-ticket">Open Ticket</a>
+                            </div>
+                        </div>
+                    <% }) %>
+                <% } else { %>
+                    <div class="no-data">No players ranked yet.</div>
+                <% } %>
+            </div>
+        </div>
+
+        <footer>
+            <a href="/admin" class="admin-link">Staff Login</a>
+        </header>
     </div>
 </body>
+</html>
