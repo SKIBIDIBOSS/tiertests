@@ -26,7 +26,7 @@ async function checkAuth() {
         const res = await fetch('/api/check-auth');
         const data = await res.json();
         if (data.authenticated) {
-            currentUser = { username: data.username, isAdmin: data.isAdmin };
+            currentUser = { username: data.username, isAdmin: data.isAdmin, isTester: data.isTester || false };
             updateSidebarAuth();
         }
     } catch (e) {}
@@ -37,7 +37,7 @@ function updateSidebarAuth() {
         document.getElementById('sidebarLoggedIn').style.display = 'block';
         document.getElementById('sidebarLoggedOut').style.display = 'none';
         document.getElementById('sidebarUsername').textContent = currentUser.username;
-        document.getElementById('sidebarRole').textContent = currentUser.isAdmin ? 'admin' : 'player';
+        document.getElementById('sidebarRole').textContent = currentUser.isAdmin ? 'admin' : currentUser.isTester ? 'tester' : 'player';
         document.getElementById('sidebarAvatar').textContent = currentUser.username[0].toUpperCase();
         if (currentUser.isAdmin) {
             document.getElementById('adminNavSection').style.display = 'block';
@@ -64,7 +64,7 @@ async function doLogin() {
         });
         const data = await res.json();
         if (data.success) {
-            currentUser = data.user;
+            currentUser = { ...data.user, isTester: data.user.isTester || false };
             updateSidebarAuth();
             showPage(data.user.isAdmin ? 'admin' : 'gamemodes');
         } else {
@@ -452,17 +452,20 @@ async function changePassword() {
 async function loadAdminData() {
     if (!currentUser?.isAdmin) return;
     try {
-        const [qRes, tRes] = await Promise.all([
+        const [qRes, tRes, uRes] = await Promise.all([
             fetch('/api/queue'),
-            fetch('/api/admin/tickets')
+            fetch('/api/admin/tickets'),
+            fetch('/api/admin/users')
         ]);
         const queue = await qRes.json();
         const tickets = await tRes.json();
+        const users = await uRes.json();
 
         document.getElementById('adminStats').innerHTML = `
+            <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-value">${users.length}</div><div class="stat-label">Total Users</div></div>
             <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-value">${queue.length}</div><div class="stat-label">In Queue</div></div>
-            <div class="stat-card"><div class="stat-icon">🎫</div><div class="stat-value">${tickets.length}</div><div class="stat-label">Tickets</div></div>
-            <div class="stat-card"><div class="stat-icon">⚔️</div><div class="stat-value">-</div><div class="stat-label">Active Tests</div></div>
+            <div class="stat-card"><div class="stat-icon">🎫</div><div class="stat-value">${tickets.filter(t=>t.status==='open').length}</div><div class="stat-label">Open Tickets</div></div>
+            <div class="stat-card"><div class="stat-icon">🧪</div><div class="stat-value">${users.filter(u=>u.is_tester&&!u.is_admin).length}</div><div class="stat-label">Testers</div></div>
         `;
 
         document.getElementById('adminTicketsTable').innerHTML = tickets.map(t => `
@@ -483,6 +486,27 @@ async function loadAdminData() {
                 <td><button class="btn btn-primary btn-sm" onclick="acceptTest('${q.id}')">Accept</button></td>
             </tr>
         `).join('');
+
+        // Populate users table if it exists
+        const usersTable = document.getElementById('adminUsersTable');
+        if (usersTable) {
+            usersTable.innerHTML = users.map(u => {
+                const role = u.is_admin ? '<span style="color:#ff4444;font-family:var(--font-mono);font-size:11px;">ADMIN</span>'
+                    : u.is_tester ? '<span style="color:#4f8eff;font-family:var(--font-mono);font-size:11px;">TESTER</span>'
+                    : '<span style="color:var(--text-dim);font-family:var(--font-mono);font-size:11px;">PLAYER</span>';
+                return `
+                    <tr>
+                        <td style="font-family:var(--font-display);font-weight:600">${u.username}</td>
+                        <td style="font-family:var(--font-mono);font-size:12px;color:var(--text-secondary)">${u.ign||'-'}</td>
+                        <td>${role}</td>
+                        <td style="font-family:var(--font-mono);font-size:12px">${u.sumo_tier||'Unrated'}</td>
+                        <td style="font-family:var(--font-mono);font-size:12px">${u.bedfight_tier||'Unrated'}</td>
+                        <td style="font-family:var(--font-mono);font-size:12px">${u.classic_tier||'Unrated'}</td>
+                        <td></td>
+                    </tr>
+                `;
+            }).join('');
+        }
     } catch (e) {}
 }
 

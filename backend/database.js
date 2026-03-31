@@ -18,6 +18,7 @@ class Database {
                     profile_picture TEXT,
                     is_admin INTEGER DEFAULT 0,
                     is_tester INTEGER DEFAULT 0,
+                    is_banned INTEGER DEFAULT 0,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )`);
 
@@ -101,6 +102,16 @@ class Database {
                     message TEXT NOT NULL,
                     status TEXT DEFAULT 'open',
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id)
+                )`);
+
+                this.db.run(`CREATE TABLE IF NOT EXISTS ticket_messages (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ticket_id INTEGER NOT NULL,
+                    user_id INTEGER NOT NULL,
+                    message TEXT NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (ticket_id) REFERENCES tickets(id),
                     FOREIGN KEY (user_id) REFERENCES users(id)
                 )`, (err) => {
                     if (err) reject(err);
@@ -343,11 +354,96 @@ class Database {
         });
     }
 
-    getForumPosts() {
+    createTicket(userId, subject, message) {
         return new Promise((resolve, reject) => {
-            this.db.all(`SELECT p.*, u.username FROM forum_posts p JOIN users u ON p.user_id = u.id ORDER BY p.created_at DESC`, (err, rows) => {
+            this.db.run('INSERT INTO tickets (user_id, subject, message) VALUES (?, ?, ?)', [userId, subject, message], function(err) {
+                if (err) reject(err);
+                else resolve({ id: this.lastID });
+            });
+        });
+    }
+
+    getTicketWithMessages(ticketId) {
+        return new Promise((resolve, reject) => {
+            this.db.get(`SELECT t.*, u.username FROM tickets t JOIN users u ON t.user_id = u.id WHERE t.id = ?`, [ticketId], (err, ticket) => {
+                if (err) { reject(err); return; }
+                if (!ticket) { resolve(null); return; }
+                this.db.all(`
+                    SELECT tm.*, u.username, u.is_admin, u.is_tester
+                    FROM ticket_messages tm
+                    JOIN users u ON tm.user_id = u.id
+                    WHERE tm.ticket_id = ?
+                    ORDER BY tm.created_at ASC
+                `, [ticketId], (err2, messages) => {
+                    if (err2) reject(err2);
+                    else resolve({ ...ticket, messages: messages || [] });
+                });
+            });
+        });
+    }
+
+    addTicketMessage(ticketId, userId, message) {
+        return new Promise((resolve, reject) => {
+            this.db.run('INSERT INTO ticket_messages (ticket_id, user_id, message) VALUES (?, ?, ?)', [ticketId, userId, message], function(err) {
+                if (err) reject(err);
+                else resolve({ id: this.lastID });
+            });
+        });
+    }
+
+    closeTicket(ticketId) {
+        return new Promise((resolve, reject) => {
+            this.db.run('UPDATE tickets SET status = ? WHERE id = ?', ['closed', ticketId], (err) => {
+                if (err) reject(err);
+                else resolve();
+            });
+        });
+    }
+
+    getTicketsByUser(userId) {
+        return new Promise((resolve, reject) => {
+            this.db.all(`SELECT t.*, u.username FROM tickets t JOIN users u ON t.user_id = u.id WHERE t.user_id = ? ORDER BY t.created_at DESC`, [userId], (err, rows) => {
                 if (err) reject(err);
                 else resolve(rows);
+            });
+        });
+    }
+
+    getForumPosts() {
+        return new Promise((resolve, reject) => {
+            this.db.all(`
+                SELECT p.*, u.username, u.is_admin, u.is_tester,
+                       (SELECT COUNT(*) FROM forum_comments fc WHERE fc.post_id = p.id) as comment_count
+                FROM forum_posts p
+                JOIN users u ON p.user_id = u.id
+                ORDER BY p.created_at DESC
+            `, (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows);
+            });
+        });
+    }
+
+    getForumPostWithComments(postId) {
+        return new Promise((resolve, reject) => {
+            this.db.get(`
+                SELECT p.*, u.username, u.is_admin, u.is_tester
+                FROM forum_posts p
+                JOIN users u ON p.user_id = u.id
+                WHERE p.id = ?
+            `, [postId], (err, post) => {
+                if (err) { reject(err); return; }
+                if (!post) { resolve(null); return; }
+                this.db.all(`
+                    SELECT fc.*, u.username, u.is_admin, u.is_tester
+                    FROM forum_comments fc
+                    JOIN users u ON fc.user_id = u.id
+                    WHERE fc.post_id = ?
+                    ORDER BY fc.created_at ASC
+                `, [postId], (err2, comments) => {
+                    if (err2) reject(err2);
+                    else resolve({ ...post, comments: comments || [] });
+                });
             });
         });
     }
@@ -375,6 +471,40 @@ class Database {
             this.db.all(`SELECT u.*, t.* FROM users u LEFT JOIN tiers t ON u.id = t.user_id ORDER BY u.created_at DESC`, (err, rows) => {
                 if (err) reject(err);
                 else resolve(rows);
+            });
+        });
+    }
+
+    getAllUsersWithTiers() {
+        return new Promise((resolve, reject) => {
+            this.db.all(`
+                SELECT u.id, u.username, u.ign, u.timezone, u.preferred_server,
+                       u.is_admin, u.is_tester, u.is_banned, u.created_at,
+                       t.sumo_tier, t.bedfight_tier, t.classic_tier, t.skywars_tier, t.boxing_tier, t.updated_at as tiers_updated_at
+                FROM users u
+                LEFT JOIN tiers t ON u.id = t.user_id
+                ORDER BY u.created_at DESC
+            `, (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows);
+            });
+        });
+    }
+
+    banUser(userId) {
+        return new Promise((resolve, reject) => {
+            this.db.run('UPDATE users SET is_banned = 1 WHERE id = ?', [userId], (err) => {
+                if (err) reject(err);
+                else resolve();
+            });
+        });
+    }
+
+    unbanUser(userId) {
+        return new Promise((resolve, reject) => {
+            this.db.run('UPDATE users SET is_banned = 0 WHERE id = ?', [userId], (err) => {
+                if (err) reject(err);
+                else resolve();
             });
         });
     }
