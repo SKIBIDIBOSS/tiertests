@@ -7,7 +7,7 @@ require('dotenv').config();
 const app = express();
 
 // --- DB CONNECTION ---
-mongoose.connect(process.env.MONGODB_URI).then(() => console.log("SKIBIDIBOSS X LINING DB CONNECTED"));
+mongoose.connect(process.env.MONGODB_URI).then(() => console.log("SKIBIDIBOSS X LINING ONLINE"));
 
 // --- MODELS ---
 const User = mongoose.model('User', new mongoose.Schema({
@@ -15,7 +15,7 @@ const User = mongoose.model('User', new mongoose.Schema({
     password: { type: String },
     ign: String,
     pfp: { type: String, default: 'https://i.imgur.com/6VBx3io.png' },
-    role: { type: String, default: 'user' }, // admin, tester, user
+    role: { type: String, default: 'user' },
     ranks: {
         sumo: { type: String, default: 'Unrated' },
         bedfight: { type: String, default: 'Unrated' },
@@ -24,45 +24,37 @@ const User = mongoose.model('User', new mongoose.Schema({
 }));
 
 const Queue = mongoose.model('Queue', new mongoose.Schema({
-    username: String, ign: String, timezone: String, server: String, mode: String, status: { type: String, default: 'Pending' }
+    username: String, ign: String, timezone: String, server: String, status: { type: String, default: 'Waiting' }
 }));
 
 const Message = mongoose.model('Message', new mongoose.Schema({
     username: String, text: String, role: String, createdAt: { type: Date, default: Date.now }
 }));
 
-// --- MIDDLEWARE ---
+// --- APP CONFIG ---
 app.set('view engine', 'ejs');
 app.use(express.urlencoded({ extended: true }));
-app.use(session({ secret: 'lining-secret', resave: false, saveUninitialized: true }));
+app.use(session({ secret: 'skibidi-lining-secret', resave: false, saveUninitialized: true }));
 
-// --- DYNAMIC TIER LOGIC ---
-function calculateNewTier(testeeCurrent, testerTier, scoreY, scoreX) {
-    // Example logic: if testee(Y) gets 2 rounds against HT2 tester(X)
-    if (testerTier === 'HT2' && scoreY >= 2) return 'HT3';
-    if (scoreY > scoreX) return testerTier; // Beat the tester? Take their rank.
-    return testeeCurrent;
+// --- DYNAMIC SCORING ENGINE ---
+function updateTier(current, testerTier, scoreTester, scoreTestee) {
+    const tiers = ['LT5', 'LT4', 'LT3', 'LT2', 'LT1', 'HT3', 'HT2', 'HT1'];
+    // If testee gets 2+ rounds against HT2, they get HT3
+    if (testerTier === 'HT2' && scoreTestee >= 2) return 'HT3';
+    // If testee actually wins the set, they take the tester's rank
+    if (scoreTestee > scoreTester) return testerTier;
+    return current;
 }
 
 // --- ROUTES ---
 
-// HUB (Leaderboard)
 app.get('/', async (req, res) => {
-    const players = await User.find({ role: 'user' }).sort({ "ranks.sumo": 1 });
+    const players = await User.find({ role: 'user' });
     const chat = await Message.find().sort({ createdAt: -1 }).limit(20);
-    res.render('index', { players, chat: chat.reverse(), user: req.session.user || null });
+    const queue = await Queue.find();
+    res.render('index', { players, chat: chat.reverse(), queue, user: req.session.user || null });
 });
 
-// SIGNUP
-app.get('/signup', (req, res) => res.render('signup'));
-app.post('/signup', async (req, res) => {
-    const { username, password, ign, pfp } = req.body;
-    await User.create({ username, password, ign, pfp, role: 'user' });
-    res.redirect('/login');
-});
-
-// LOGIN
-app.get('/login', (req, res) => res.render('login', { error: null }));
 app.post('/login', async (req, res) => {
     const { username, password } = req.body;
     if (username === '123123' && password === '123123') {
@@ -71,24 +63,24 @@ app.post('/login', async (req, res) => {
     }
     const found = await User.findOne({ username, password });
     if (found) { req.session.user = found; res.redirect('/'); }
-    else res.render('login', { error: 'Invalid credentials' });
+    else res.redirect('/login');
 });
 
-// QUEUE & TESTER ACTIONS
 app.post('/queue/join', async (req, res) => {
     await Queue.create(req.body);
     res.redirect('/');
 });
 
-app.post('/test/submit', async (req, res) => {
-    const { testeeName, testerName, mode, scoreX, scoreY } = req.body;
-    const testee = await User.findOne({ username: testeeName });
-    const tester = await User.findOne({ username: testerName });
-    
-    const newTier = calculateNewTier(testee.ranks[mode], tester.ranks[mode], parseInt(scoreY), parseInt(scoreX));
-    
-    await User.findOneAndUpdate({ username: testeeName }, { [`ranks.${mode}`]: newTier });
-    await Queue.findOneAndDelete({ username: testeeName });
+app.get('/admin', async (req, res) => {
+    if (!req.session.user || req.session.user.role !== 'admin') return res.redirect('/');
+    const users = await User.find();
+    res.render('admin', { users });
+});
+
+app.post('/chat/send', async (req, res) => {
+    if (req.session.user) {
+        await Message.create({ username: req.session.user.username, text: req.body.text, role: req.session.user.role });
+    }
     res.redirect('/');
 });
 
