@@ -1,0 +1,24 @@
+:root {
+    --bg: #36393f;
+    --sidebar: #2f3136;
+    --admin: #ed4245;
+    --tester: #3498db;
+    --user: #ffffff;
+}
+
+body { background: var(--bg); color: #dcddde; font-family: sans-serif; }
+
+/* Role Colors */
+.txt-admin { color: var(--admin); font-weight: bold; }
+.txt-tester { color: var(--tester); font-weight: bold; }
+.txt-user { color: var(--user); }
+
+.chat-box {
+    background: var(--sidebar);
+    height: 400px;
+    padding: 20px;
+    border-radius: 8px;
+    overflow-y: auto;
+}
+
+.admin-card { background: #202225; padding: 15px; margin-bottom: 10px; border-radius: 5px; }
