@@ -1,69 +1,27 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Forum - MC Tier Testing</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <nav class="navbar">
-        <div class="nav-container">
-            <h1 class="logo">MC Tier Testing</h1>
-            <div class="nav-links">
-                <a href="index.html">Leaderboard</a>
-                <a href="dashboard.html">Dashboard</a>
-                <a href="profile.html">Profile</a>
-                <a href="forum.html">Forum</a>
-                <a href="#" id="authLink">Login</a>
-            </div>
-        </div>
-    </nav>
-
-    <div class="container forum-container">
-        <div class="forum-header">
-            <h2>Community Forum</h2>
-            <button id="newPostBtn" class="new-post-btn">+ New Post</button>
-        </div>
+io.on('connection', (socket) => {
+    console.log('User connected');
+    
+    socket.on('join-chat', (username) => {
+        socket.join('general-chat');
+        socket.username = username;
         
-        <div id="forumPosts" class="forum-posts">
-            <p>Loading posts...</p>
-        </div>
-    </div>
-
-    <!-- New Post Modal -->
-    <div id="newPostModal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h2>Create New Post</h2>
-            <form id="newPostForm">
-                <div class="form-group">
-                    <label>Title:</label>
-                    <input type="text" id="postTitle" required>
-                </div>
-                <div class="form-group">
-                    <label>Content:</label>
-                    <textarea id="postContent" rows="6" required></textarea>
-                </div>
-                <button type="submit" class="submit-btn">Create Post</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- Comment Modal -->
-    <div id="commentModal" class="modal">
-        <div class="modal-content comment-modal">
-            <span class="close">&times;</span>
-            <h2 id="commentPostTitle"></h2>
-            <div id="commentContent" class="comment-content"></div>
-            <div class="comment-form">
-                <textarea id="commentText" rows="3" placeholder="Write a comment..."></textarea>
-                <button id="submitCommentBtn" class="submit-btn">Post Comment</button>
-            </div>
-            <div id="commentsList" class="comments-list"></div>
-        </div>
-    </div>
-
-    <script src="forum.js"></script>
-</body>
-</html>
+        // Update online users
+        const onlineUsers = [];
+        for (let [id, socket] of io.sockets.sockets) {
+            if (socket.username) onlineUsers.push(socket.username);
+        }
+        io.emit('online-users', onlineUsers);
+    });
+    
+    socket.on('chat-message', (data) => {
+        io.to('general-chat').emit('chat-message', data);
+    });
+    
+    socket.on('disconnect', () => {
+        const onlineUsers = [];
+        for (let [id, socket] of io.sockets.sockets) {
+            if (socket.username) onlineUsers.push(socket.username);
+        }
+        io.emit('online-users', onlineUsers);
+    });
+});
