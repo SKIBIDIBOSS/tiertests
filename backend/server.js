@@ -14,6 +14,8 @@ const io = socketIo(server, {
     cors: { origin: '*', methods: ['GET', 'POST'] }
 });
 
+app.set('io', io);
+
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -45,22 +47,25 @@ if (!fs.existsSync(uploadDir)) {
 
 io.on('connection', (socket) => {
     console.log('New client connected');
+    
     socket.on('join-test', (testId) => {
         socket.join('test-' + testId);
+        console.log('User joined test-' + testId);
     });
-    socket.on('chat-message', (data) => {
-        io.to('test-' + data.testId).emit('chat-message', {
-            user: data.user,
+    
+    socket.on('test-message', (data) => {
+        io.to('test-' + data.testId).emit('test-message', {
+            username: data.username,
             message: data.message,
             timestamp: new Date()
         });
     });
+    
     socket.on('disconnect', () => {
         console.log('Client disconnected');
     });
 });
 
-// Auth routes
 app.post('/api/register', async (req, res) => {
     try {
         const { username, password, ign, timezone, preferredServer } = req.body;
@@ -75,17 +80,13 @@ app.post('/api/register', async (req, res) => {
 app.post('/api/login', async (req, res) => {
     try {
         const { username, password } = req.body;
-        console.log('Login attempt for username:', username);
-        
         const user = await db.getUserByUsername(username);
         
         if (!user) {
-            console.log('User not found:', username);
             return res.status(401).json({ success: false, error: 'Invalid credentials' });
         }
         
         const isValid = await auth.verifyPassword(password, user.password);
-        console.log('Password valid:', isValid);
         
         if (isValid) {
             req.session.userId = user.id;
@@ -104,7 +105,6 @@ app.post('/api/login', async (req, res) => {
             res.status(401).json({ success: false, error: 'Invalid credentials' });
         }
     } catch (error) {
-        console.error('Login error:', error);
         res.status(400).json({ success: false, error: error.message });
     }
 });
@@ -137,7 +137,9 @@ app.get('/api/leaderboard', async (req, res) => {
 
 app.post('/api/join-queue', async (req, res) => {
     try {
-        if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+        if (!req.session.userId) {
+            return res.status(401).json({ error: 'Not authenticated' });
+        }
         const { ign, timezone, preferredServer, username } = req.body;
         const queueEntry = await db.addToQueue(req.session.userId, ign, timezone, preferredServer, username);
         res.json({ success: true, queueId: queueEntry.id });
@@ -150,6 +152,80 @@ app.get('/api/queue', async (req, res) => {
     try {
         const queue = await db.getQueue();
         res.json(queue);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+app.post('/api/accept-test/:queueId', async (req, res) => {
+    try {
+        if (!req.session.userId) {
+            return res.status(401).json({ error: 'Not authenticated' });
+        }
+        
+        const isTester = await db.isTester(req.session.userId);
+        const user = await db.getUserById(req.session.userId);
+        
+        if (!isTester && !user.is_admin) {
+            return res.status(403).json({ error: 'Not authorized to test' });
+        }
+        
+        const test = await db.acceptTest(req.params.queueId, req.session.userId);
+        res.json({ success: true, testId: test.id });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+app.post('/api/submit-test', async (req, res) => {
+    try {
+        if (!req.session.userId) {
+            return res.status(401).json({ error: 'Not authenticated' });
+        }
+        
+        const { testId, testerScore, testeeScore, testerName, testeeName, testeeIgn, server } = req.body;
+        await db.submitTestResult(testId, testerScore, testeeScore, testerName, testeeName, testeeIgn, server);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+app.get('/api/test/details/:testId', async (req, res) => {
+    try {
+        const test = await db.getTestDetails(req.params.testId);
+        res.json(test);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+app.get('/api/test/messages/:testId', async (req, res) => {
+    try {
+        const messages = await db.getTestMessages(req.params.testId);
+        res.json(messages);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+app.post('/api/test/send-message', async (req, res) => {
+    try {
+        if (!req.session.userId) {
+            return res.status(401).json({ error: 'Not authenticated' });
+        }
+        
+        const { testId, message } = req.body;
+        await db.saveTestMessage(testId, req.session.userId, message);
+        
+        const io = req.app.get('io');
+        io.to('test-' + testId).emit('test-message', {
+            username: req.session.username,
+            message: message,
+            timestamp: new Date()
+        });
+        
+        res.json({ success: true });
     } catch (error) {
         res.status(400).json({ error: error.message });
     }
@@ -195,22 +271,6 @@ app.post('/api/change-password', async (req, res) => {
     }
 });
 
-// Debug route - check what users exist
-app.get('/api/debug-users', async (req, res) => {
-    try {
-        const users = await db.getAllUsers();
-        res.json({ 
-            users: users.map(u => ({ 
-                username: u.username, 
-                is_admin: u.is_admin,
-                has_password: !!u.password 
-            }))
-        });
-    } catch (error) {
-        res.json({ error: error.message });
-    }
-});
-
 const PORT = process.env.PORT || 3000;
 
 async function initialize() {
@@ -218,11 +278,6 @@ async function initialize() {
         await db.init();
         console.log('Database initialized');
         
-        // Check existing users
-        const existingUsers = await db.getAllUsers();
-        console.log('Existing users:', existingUsers.map(u => u.username));
-        
-        // Create or reset admin user
         let adminUser = await db.getUserByUsername('admin');
         if (adminUser) {
             const newHash = await auth.hashPassword('123123');
@@ -234,7 +289,6 @@ async function initialize() {
             console.log('Admin created: admin / 123123');
         }
         
-        // Create lining user
         let liningUser = await db.getUserByUsername('lining');
         if (liningUser) {
             const newHash = await auth.hashPassword('lining123');
@@ -248,7 +302,6 @@ async function initialize() {
             console.log('Lining created: lining / lining123');
         }
         
-        // Create SKIBIDIBOSS user
         let skibiUser = await db.getUserByUsername('SKIBIDIBOSS');
         if (skibiUser) {
             const newHash = await auth.hashPassword('skibidiboss123');
@@ -264,9 +317,7 @@ async function initialize() {
         
         server.listen(PORT, () => {
             console.log('===================================');
-            console.log('SERVER STARTED SUCCESSFULLY!');
-            console.log('===================================');
-            console.log('Port: ' + PORT);
+            console.log('SERVER STARTED ON PORT: ' + PORT);
             console.log('===================================');
             console.log('LOGIN CREDENTIALS:');
             console.log('  Admin:      admin / 123123');
@@ -281,46 +332,3 @@ async function initialize() {
 }
 
 initialize();
-// Get test details
-app.get('/api/test/details/:testId', async (req, res) => {
-    try {
-        const test = await db.getTestDetails(req.params.testId);
-        res.json(test);
-    } catch (error) {
-        res.status(400).json({ error: error.message });
-    }
-});
-
-// Get test messages
-app.get('/api/test/messages/:testId', async (req, res) => {
-    try {
-        const messages = await db.getTestMessages(req.params.testId);
-        res.json(messages);
-    } catch (error) {
-        res.status(400).json({ error: error.message });
-    }
-});
-
-// Send test message
-app.post('/api/test/send-message', async (req, res) => {
-    try {
-        if (!req.session.userId) {
-            return res.status(401).json({ error: 'Not authenticated' });
-        }
-        
-        const { testId, message } = req.body;
-        await db.saveTestMessage(testId, req.session.userId, message);
-        
-        // Broadcast to test room
-        io.to(`test-${testId}`).emit('test-message', {
-            username: req.session.username,
-            message: message,
-            timestamp: new Date()
-        });
-        
-        res.json({ success: true });
-    } catch (error) {
-        console.error('Error sending message:', error);
-        res.status(400).json({ error: error.message });
-    }
-});
