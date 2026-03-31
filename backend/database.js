@@ -232,3 +232,116 @@ class Database {
 }
 
 module.exports = Database;
+// Delete user and all associated data
+deleteUser(userId) {
+    return new Promise((resolve, reject) => {
+        this.db.run('DELETE FROM users WHERE id = ?', [userId], (err) => {
+            if (err) reject(err);
+            else resolve();
+        });
+    });
+}
+
+deleteUserTiers(userId) {
+    return new Promise((resolve, reject) => {
+        this.db.run('DELETE FROM tiers WHERE user_id = ?', [userId], (err) => {
+            if (err) reject(err);
+            else resolve();
+        });
+    });
+}
+
+deleteUserQueueEntries(userId) {
+    return new Promise((resolve, reject) => {
+        this.db.run('DELETE FROM queue WHERE user_id = ?', [userId], (err) => {
+            if (err) reject(err);
+            else resolve();
+        });
+    });
+}
+
+deleteUserTests(userId) {
+    return new Promise((resolve, reject) => {
+        this.db.run('DELETE FROM tests WHERE tester_id = ? OR testee_id = ?', [userId, userId], (err) => {
+            if (err) reject(err);
+            else resolve();
+        });
+    });
+}
+
+deleteUserForumPosts(userId) {
+    return new Promise((resolve, reject) => {
+        this.db.run('DELETE FROM forum_posts WHERE user_id = ?', [userId], (err) => {
+            if (err) reject(err);
+            else resolve();
+        });
+    });
+}
+
+deleteUserComments(userId) {
+    return new Promise((resolve, reject) => {
+        this.db.run('DELETE FROM forum_comments WHERE user_id = ?', [userId], (err) => {
+            if (err) reject(err);
+            else resolve();
+        });
+    });
+}
+
+deleteUserTickets(userId) {
+    return new Promise((resolve, reject) => {
+        this.db.run('DELETE FROM tickets WHERE user_id = ?', [userId], (err) => {
+            if (err) reject(err);
+            else resolve();
+        });
+    });
+}
+
+getAllUsers() {
+    return new Promise((resolve, reject) => {
+        this.db.all(`
+            SELECT u.*, t.* 
+            FROM users u 
+            LEFT JOIN tiers t ON u.id = t.user_id 
+            ORDER BY u.created_at DESC
+        `, (err, rows) => {
+            if (err) reject(err);
+            else resolve(rows);
+        });
+    });
+}
+
+getQueueEntryById(queueId) {
+    return new Promise((resolve, reject) => {
+        this.db.get('SELECT * FROM queue WHERE id = ?', [queueId], (err, row) => {
+            if (err) reject(err);
+            else resolve(row);
+        });
+    });
+}
+
+deleteQueueEntry(queueId) {
+    return new Promise((resolve, reject) => {
+        this.db.run('DELETE FROM queue WHERE id = ?', [queueId], (err) => {
+            if (err) reject(err);
+            else resolve();
+        });
+    });
+}
+
+clearAllQueue() {
+    return new Promise((resolve, reject) => {
+        this.db.run('DELETE FROM queue WHERE status = "pending"', (err) => {
+            if (err) reject(err);
+            else resolve();
+        });
+    });
+}
+
+getUserByUsername(username) {
+    return new Promise((resolve, reject) => {
+        this.db.get('SELECT * FROM users WHERE username = ?', [username], (err, row) => {
+            if (err) reject(err);
+            else resolve(row);
+        });
+    });
+}
