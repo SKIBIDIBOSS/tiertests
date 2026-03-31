@@ -1,20 +1,176 @@
-<body style="padding: 50px;">
-    <h1>Admin Panel</h1>
-    <% users.forEach(user => { %>
-        <div class="admin-card">
-            <span class="txt-<%= user.role %>"><%= user.username %></span> (Tier: <%= user.tier %>)
-            <form action="/admin/action" method="POST" style="display:inline;">
-                <input type="hidden" name="userId" value="<%= user._id %>">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STAFF TERMINAL | CORE_HUB</title>
+    <style>
+        :root {
+            --bg: #0b0c0e;
+            --sidebar: #121417;
+            --accent: #ff4757; /* Red for Admin */
+            --accent-glow: rgba(255, 71, 87, 0.3);
+            --card: #1c1e22;
+            --text-main: #ffffff;
+            --text-dim: #8e9297;
+        }
+
+        body {
+            margin: 0;
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .admin-container {
+            width: 100%;
+            max-width: 1000px;
+            padding: 60px 20px;
+        }
+
+        .header {
+            border-left: 4px solid var(--accent);
+            padding-left: 20px;
+            margin-bottom: 40px;
+        }
+
+        h1 { font-size: 2.5rem; text-transform: uppercase; margin: 0; letter-spacing: -1px; }
+        .status { color: var(--accent); font-weight: bold; font-size: 0.8rem; letter-spacing: 2px; }
+
+        /* --- ADD USER FORM --- */
+        .form-card {
+            background: var(--card);
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 40px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        input, select {
+            background: #000;
+            border: 1px solid #333;
+            padding: 12px;
+            color: white;
+            border-radius: 8px;
+            outline: none;
+        }
+
+        input:focus { border-color: var(--accent); }
+
+        .btn-add {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .btn-add:hover { box-shadow: 0 0 20px var(--accent-glow); transform: translateY(-2px); }
+
+        /* --- TABLE --- */
+        .user-table {
+            width: 100%;
+            background: var(--card);
+            border-radius: 15px;
+            border-collapse: collapse;
+            overflow: hidden;
+        }
+
+        th { text-align: left; padding: 20px; background: rgba(0,0,0,0.2); color: var(--text-dim); font-size: 0.8rem; }
+        td { padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.02); }
+
+        .btn-delete {
+            background: transparent;
+            color: #ff4757;
+            border: 1px solid #ff4757;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.7rem;
+        }
+
+        .btn-delete:hover { background: #ff4757; color: white; }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: var(--text-dim);
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="admin-container">
+        <div class="header">
+            <div class="status">● AUTHORIZED PERSONNEL ONLY</div>
+            <h1>Staff Terminal</h1>
+        </div>
+
+        <div class="form-card">
+            <h3 style="margin-top: 0;">Register New Operative</h3>
+            <form action="/admin/action" method="POST" class="form-grid">
+                <input type="hidden" name="action" value="create">
+                <input type="text" name="username" placeholder="Username" required>
                 <select name="tier">
-                    <option value="HT1">HT1</option>
+                    <option value="Unranked">Select Tier</option>
+                    <option value="HT1">HT1 (Top)</option>
                     <option value="LT1">LT1</option>
-                    <option value="Unranked">Unranked</option>
+                    <option value="HT2">HT2</option>
+                    <option value="LT2">LT2</option>
+                    <option value="HT3">HT3</option>
                 </select>
-                <button name="action" value="updateTier">Update Tier</button>
-                <button name="action" value="ban" style="background:red;">Ban</button>
-                <button name="action" value="delete">Delete</button>
+                <select name="role">
+                    <option value="user">User</option>
+                    <option value="tester">Tester</option>
+                    <option value="admin">Admin</option>
+                </select>
+                <button type="submit" class="btn-add">INITIALIZE DATA</button>
             </form>
         </div>
-    <% }) %>
-    <a href="/">Back to Leaderboard</a>
+
+        <table class="user-table">
+            <thead>
+                <tr>
+                    <th>USERNAME</th>
+                    <th>RANKING</th>
+                    <th>ROLE</th>
+                    <th>ACTIONS</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% users.forEach(user => { %>
+                    <tr>
+                        <td><%= user.username %></td>
+                        <td><span style="color: #00d1ff;"><%= user.tier %></span></td>
+                        <td><%= user.role %></td>
+                        <td>
+                            <form action="/admin/action" method="POST" style="display:inline;">
+                                <input type="hidden" name="action" value="delete">
+                                <input type="hidden" name="userId" value="<%= user._id %>">
+                                <button type="submit" class="btn-delete">REMOVE</button>
+                            </form>
+                        </td>
+                    </tr>
+                <% }) %>
+            </tbody>
+        </table>
+
+        <a href="/" class="back-link">← Return to Public Hub</a>
+    </div>
+
 </body>
+</html>
